@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "lookyloo-monitoring"
+version = "0.1.0"
+description = ""
+authors = ["Raphaël Vinot <raphael@vinot.info>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pylookyloo = "^1.6.0"
+plotly = "^4.14.3"
+jupyter-dash = "^0.4.0"
+jupyterlab = "^3.0.16"
+pandas = "^1.2.4"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+run_captures = "bin.run_captures:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
