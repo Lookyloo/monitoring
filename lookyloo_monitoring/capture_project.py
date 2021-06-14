@@ -72,6 +72,7 @@ class CaptureProject():
                     uuid = f.read()
                     stats = self.lookyloo.get_capture_stats(uuid)
                     to_save[capture.name] = stats
+                    to_save[capture.name]['uuid'] = uuid
             with out_json.open('w') as f:
                 json.dump(to_save, f, indent=2)
 
@@ -84,21 +85,62 @@ class CaptureProject():
             with (self.project_dir / h / 'all_stats.json').open() as f:
                 stats = json.load(f)
 
-            x_list = list(stats.keys())
-            # Prepare y lists
-            y_lists = defaultdict(list)
-            for entries in stats.values():
-                for k, v in entries.items():
-                    if k == 'total_load_time':
-                        # convert to seconds
-                        t = datetime.strptime(v, "%H:%M:%S.%f")
-                        v = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond).total_seconds()
-                    y_lists[k].append(v)
+            timestamps = list(stats.keys())
+            uuids = []
+
             fig = go.Figure()
-            fig.layout.title = url
+
+            y_lists = defaultdict(list)
+            for ts_data in stats.values():
+                for data_name, data_value in ts_data.items():
+                    if data_name == 'uuid':
+                        # This won't be displayed on the plot but used for a link
+                        uuids.append(f'<a href="{self.lookyloo.root_url}/tree/{data_value}">Open capture on lookyloo</a>')
+                        continue
+                    if data_name == 'total_load_time':
+                        # convert to seconds
+                        t = datetime.strptime(data_value, "%H:%M:%S.%f")
+                        data_value = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond).total_seconds()
+                    y_lists[data_name].append(data_value)
+
             for name, l in y_lists.items():
-                fig.add_trace(go.Scatter(x=x_list, y=l,
-                                         mode='lines+markers',
-                                         name=name))
+                if name == "total_size_responses":
+                    fig.add_trace(go.Scatter(x=timestamps, y=l,
+                                             mode='lines+markers',
+                                             name=name,
+                                             text=uuids,
+                                             yaxis="y2"))
+                else:
+                    fig.add_trace(go.Scatter(x=timestamps, y=l,
+                                             mode='lines+markers',
+                                             text=uuids,
+                                             name=name))
+            fig.update_layout(
+                yaxis=dict(
+                    title="Unique stuff",
+                    titlefont=dict(
+                        color="#1f77b4"
+                    ),
+                    tickfont=dict(
+                        color="#1f77b4"
+                    )
+                ),
+                yaxis2=dict(
+                    title="Responses size",
+                    titlefont=dict(
+                        color="#ff7f0e"
+                    ),
+                    tickfont=dict(
+                        color="#ff7f0e"
+                    ),
+                    anchor="x",
+                    overlaying="y",
+                    side="right"
+                )
+            )
+            fig.update_layout(hovermode="x unified")
+            fig.update_layout(
+                title_text=url
+            )
             figures.append(fig)
         return figures

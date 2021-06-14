@@ -12,18 +12,19 @@ logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s:%(message)s',
 
 def main():
     parser = argparse.ArgumentParser(description='Capture a list of websites')
-    parser.add_argument('--lookyloo_url', default="https://lookyloo.circl.lu/", help='URL of the lookyloo instance.')
+    parser.add_argument('--lookyloo_url', default="http://localhost:5100/", help='URL of the lookyloo instance.')
     parser.add_argument('-p', '--project', required=True, help="Project to capture")
-    parser.add_argument('--stats-only', default=False, action='store_true', help="Only get stats, no trigger")
+    parser.add_argument('--stats', default=False, action='store_true', help="Get and open the stats, no captures")
     args = parser.parse_args()
 
     captures = CaptureProject(args.project, lookyloo_url=args.lookyloo_url)
-    if not args.stats_only:
+    if args.stats:
+        captures.make_stats()
+        graphes = captures.prepare_graphs()
+        for g in graphes:
+            g.show()
+    else:
         captures.trigger_captures()
-    captures.make_stats()
-    graphes = captures.prepare_graphs()
-    for g in graphes:
-        g.show()
 
 
 if __name__ == '__main__':
