@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from pylookyloo import Lookyloo
 
@@ -88,33 +89,53 @@ class CaptureProject():
             timestamps = list(stats.keys())
             uuids = []
 
-            fig = go.Figure()
+            fig = make_subplots(
+                rows=2, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.03,
+                specs=[[{"type": "scatter"}],
+                       [{"type": "table"}]]
+            )
 
             y_lists = defaultdict(list)
-            for ts_data in stats.values():
+            uuids = []
+            for ts, ts_data in stats.items():
                 for data_name, data_value in ts_data.items():
                     if data_name == 'uuid':
-                        # This won't be displayed on the plot but used for a link
+                        # This won't be displayed in the plot but used for a link
                         uuids.append(f'<a href="{self.lookyloo.root_url}/tree/{data_value}">Open capture on lookyloo</a>')
-                        continue
-                    if data_name == 'total_load_time':
-                        # convert to seconds
-                        t = datetime.strptime(data_value, "%H:%M:%S.%f")
-                        data_value = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond).total_seconds()
-                    y_lists[data_name].append(data_value)
+                    else:
+                        if data_name == 'total_load_time':
+                            # convert to seconds
+                            t = datetime.strptime(data_value, "%H:%M:%S.%f")
+                            data_value = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond).total_seconds()
+                        y_lists[data_name].append(data_value)
 
             for name, l in y_lists.items():
                 if name == "total_size_responses":
                     fig.add_trace(go.Scatter(x=timestamps, y=l,
                                              mode='lines+markers',
                                              name=name,
-                                             text=uuids,
                                              yaxis="y2"))
                 else:
                     fig.add_trace(go.Scatter(x=timestamps, y=l,
                                              mode='lines+markers',
-                                             text=uuids,
                                              name=name))
+
+            fig.add_trace(
+                go.Table(
+                    header=dict(
+                        values=["Date", "Lookyloo link", "Total Hostnames", "Total URLs", "Total Unique URLs", "Total Unique Hostnames", "Total cookies sent", "Total cookies Received", "Tree Depth", "Redirects to landing page", "Total Load time (in seconds)", "Total size"],
+                        font=dict(size=10),
+                        align="left"
+                    ),
+                    cells=dict(
+                        values=[timestamps, uuids] + [value for value in y_lists.values()],
+                        align="left")
+                ),
+                row=2, col=1
+            )
+
             fig.update_layout(
                 yaxis=dict(
                     title="Unique stuff",
@@ -140,7 +161,8 @@ class CaptureProject():
             )
             fig.update_layout(hovermode="x unified")
             fig.update_layout(
-                title_text=url
+                title_text=url,
+                height=1200
             )
             figures.append(fig)
         return figures
