@@ -15,9 +15,9 @@ app.wsgi_app = ReverseProxied(app.wsgi_app)  # type: ignore
 
 app.config['SECRET_KEY'] = get_secret_key()
 
-api = Api(app, title='Project API',
-          description='API to query a the project.',
-          version=version('project'))
+api = Api(app, title='Web Monitoring API',
+          description='API to query the web monitoring.',
+          version=version('webmonitoring'))
 
 monitoring: Monitoring = Monitoring()
 
