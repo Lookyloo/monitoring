@@ -9,9 +9,10 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List
 
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import plotly.graph_objects as go  # type: ignore
+from plotly.subplots import make_subplots  # type: ignore
 
 from pylookyloo import Lookyloo
 
@@ -87,7 +88,7 @@ class CaptureProject():
                 stats = json.load(f)
 
             timestamps = list(stats.keys())
-            uuids = []
+            uuids: List[str] = []
 
             fig = make_subplots(
                 rows=2, cols=1,
@@ -125,7 +126,7 @@ class CaptureProject():
             fig.add_trace(
                 go.Table(
                     header=dict(
-                        values=["Date", "Lookyloo link", "Total Hostnames", "Total URLs", "Total Unique URLs", "Total Unique Hostnames", "Total cookies sent", "Total cookies Received", "Tree Depth", "Redirects to landing page", "Total Load time (in seconds)", "Total size"],
+                        values=["Date", "Lookyloo link", "Total Hostnames", "Total URLs", "Total Unique URLs", "Total Unique Hostnames", "Total cookies sent", "Total cookies Received", "Tree Depth", "Redirects to landing page", "Cumulative Load time (in seconds)", "Total size"],
                         font=dict(size=10),
                         align="left"
                     ),
