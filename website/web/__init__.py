@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from importlib.metadata import version
+from typing import Dict, Any
+
 from flask import Flask, request
 from flask_restx import Api, Resource, fields  # type: ignore
 
@@ -49,8 +51,7 @@ class Monitor(Resource):
 
     @api.doc(body=monitor_fields_post)
     def post(self):
-        monit = request.get_json(force=True)  # type: ignore
-        print(monit)
+        monit: Dict[str, Any] = request.get_json(force=True)  # type: ignore
         monitor_uuid = monitoring.monitor(monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'))
         # TODO: get that somewhere else.

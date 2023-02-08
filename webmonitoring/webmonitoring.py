@@ -31,7 +31,7 @@ class Monitoring():
         local key = KEYS[1]
         local now = ARGV[1]
         local elems = redis.call('ZRANGE', key, 0, now, 'BYSCORE')
-        if elems.length then
+        if #(elems) > 0 then
           redis.call('ZREM', key, unpack(elems))
         end
         return elems
@@ -78,7 +78,7 @@ class Monitoring():
                 continue
             freq = self.redis.get(f'{monitor_uuid}:frequency')
             # WIP, few hardcoded values - later, use the cron format too
-            next_run = {monitor_uuid: 0}
+            next_run = {monitor_uuid: 0.0}
             if freq == 'hourly':
                 next_run[monitor_uuid] = (datetime.now() + timedelta(hours=1)).timestamp()
             elif freq == 'daily':
@@ -89,7 +89,9 @@ class Monitoring():
 
     def process_monitoring_queue(self):
         now = datetime.now().timestamp()
+        # now = 400000000000000000000000000000
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             settings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
-            new_capture = {self.lookyloo.enqueue(*settings): now}
-            self.redis.zadd(f'{monitor_uuid}:captures', mapping=new_capture)
+            new_capture_uuid = self.lookyloo.enqueue(**settings, quiet=True)
+            if self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
+                self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
