@@ -4,7 +4,7 @@ from importlib.metadata import version
 from typing import Dict, Any
 
 from flask import Flask, request
-from flask_bootstrap import Bootstrap5
+from flask_bootstrap import Bootstrap5  # type: ignore
 from flask_restx import Api, Resource, fields  # type: ignore
 
 from webmonitoring.webmonitoring import Monitoring
