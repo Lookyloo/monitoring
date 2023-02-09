@@ -5,7 +5,7 @@ import logging
 from uuid import uuid4
 
 from datetime import datetime, timedelta
-from typing import MutableMapping, Any, Optional, Union
+from typing import MutableMapping, Any, Optional, Union, List, Dict
 
 from pylookyloo import Lookyloo
 from redis import ConnectionPool, Redis
@@ -44,6 +44,15 @@ class Monitoring():
 
     def check_redis_up(self):
         return self.redis.ping()
+
+    def get_monitored(self, can_compare_only: bool=False) -> List[str]:
+        monitored = self.redis.smembers('monitored')
+        if not can_compare_only:
+            return monitored
+        return [m for m in monitored if self.redis.zcard(f'{m}:captures') > 1]
+
+    def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
+        return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
 
     def monitor(self, capture_settings: MutableMapping[str, Any], /, frequency: str, *,
                 expire_at: Optional[Union[datetime, str, int, float]]=None, collection: Optional[str]=None):
@@ -104,7 +113,6 @@ class Monitoring():
 
     def process_monitoring_queue(self):
         now = datetime.now().timestamp()
-        # now = 400000000000000000000000000000
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             settings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
             new_capture_uuid = self.lookyloo.enqueue(**settings, quiet=True)

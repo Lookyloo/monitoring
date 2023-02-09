@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Compare captures{% endblock %}
+
+{% block content %}
+<div class="container">
+  <table class="table">
+    <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">URL</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for uuid, monitored_url in monitored_index %}
+    <tr>
+        <th scope="row"><a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a></th>
+      <td>{{monitored_url}}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+
+{% endblock %}

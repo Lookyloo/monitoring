@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
-from importlib.metadata import version
-from typing import Dict, Any
+import json
 
-from flask import Flask, request
+from importlib.metadata import version
+from typing import Dict, Any, List, Tuple
+
+from flask import Flask, request, render_template
 from flask_bootstrap import Bootstrap5  # type: ignore
 from flask_restx import Api, Resource, fields  # type: ignore
 
@@ -23,11 +25,30 @@ app.config['SESSION_COOKIE_NAME'] = 'lookyloo_webmonitoring'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 app.debug = False
 
+monitoring: Monitoring = Monitoring()
+
+
+@app.route('/monitored', methods=['GET'])
+def monitored():
+    if request.method == 'HEAD':
+        # Just returns ack if the webserver is running
+        return 'Ack'
+    monitored_index: List[Tuple[str, str]] = []
+    for uuid in monitoring.get_monitored(can_compare_only=True):
+        settings = monitoring.get_monitored_settings(uuid)
+        monitored_index.append((uuid, settings['url']))
+    return render_template('monitored.html', monitored_index=monitored_index)
+
+
+@app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])
+def changes_tracking(monitor_uuid: str):
+    changes = monitoring.compare_captures(monitor_uuid)
+    return render_template('changes_tracking.html', changes=json.dumps(changes, indent=2))
+
+
 api = Api(app, title='Web Monitoring API',
           description='API to query the web monitoring.',
           version=version('webmonitoring'))
-
-monitoring: Monitoring = Monitoring()
 
 
 @api.route('/redis_up')
@@ -69,6 +90,4 @@ class Monitor(Resource):
 class Compare(Resource):
 
     def get(self, monitor_uuid: str):
-        a = monitoring.compare_captures(monitor_uuid)
-        print(a)
-        return a
+        return monitoring.compare_captures(monitor_uuid)
