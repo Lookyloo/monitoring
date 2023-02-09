@@ -12,6 +12,8 @@ update = "bin.update:main"
 shutdown = "bin.shutdown:main"
 run_backend = "bin.run_backend:main"
 start_website = "bin.start_website:main"
+monitoring_queue_manager = "bin.monitoring_queue_manager:main"
+
 run_captures = "bin.run_captures:main"
 
 [tool.poetry.dependencies]
@@ -20,12 +22,13 @@ redis = {version = "^4.5.1", extras = ["hiredis"]}
 flask-restx = "^1.0.6"
 werkzeug = "^2.2.2"
 gunicorn = "^20.1.0"
-pylookyloo = "^1.17.2"
 plotly = "^5.13.0"
 jupyter-dash = "^0.4.2"
 jupyterlab = "^3.6.1"
 pandas = "^1.5.3"
 cron-converter = "^1.0.1"
+bootstrap-flask = "^2.2.0"
+pylookyloo = {git = "https://github.com/Lookyloo/PyLookyloo.git"}
 
 [tool.poetry.dev-dependencies]
 mypy = "^1.0.0"
@@ -36,7 +39,7 @@ requires = ["poetry-core>=1.2.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
-python_version = 3.8
+python_version = "3.10"
 check_untyped_defs = true
 ignore_errors = false
 ignore_missing_imports = false

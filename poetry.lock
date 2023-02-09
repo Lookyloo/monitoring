@@ -276,6 +276,22 @@ webencodings = "*"
 css = ["tinycss2 (>=1.1.0,<1.2)"]
 
 [[package]]
+name = "bootstrap-flask"
+version = "2.2.0"
+description = "Bootstrap 4 & 5 helper for your Flask projects."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "Bootstrap-Flask-2.2.0.tar.gz", hash = "sha256:40f3bf7d5802e429b2fca286a548bdde816c1185c28aa8df3051cff35cd05cac"},
+    {file = "Bootstrap_Flask-2.2.0-py2.py3-none-any.whl", hash = "sha256:b1fd9be1d22f4f1714a8a596ea2a4a5db9c957ba6db4aea4cb38ae90555233f3"},
+]
+
+[package.dependencies]
+Flask = "*"
+WTForms = "*"
+
+[[package]]
 name = "certifi"
 version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -2012,17 +2028,21 @@ version = "1.17.2"
 description = "Python CLI and module for Lookyloo"
 category = "main"
 optional = false
-python-versions = ">=3.8,<4.0"
-files = [
-    {file = "pylookyloo-1.17.2-py3-none-any.whl", hash = "sha256:c5b53c5b93c35a84151613f830223050493f3da8b0065c026ea07a0109bccab9"},
-    {file = "pylookyloo-1.17.2.tar.gz", hash = "sha256:22bfb4788700e7936677269e3917d6d6f20fc4feef7960f7cebfca4f3f0ad268"},
-]
+python-versions = "^3.8"
+files = []
+develop = false
 
 [package.dependencies]
-requests = ">=2.28.2,<3.0.0"
+requests = "^2.28.2"
 
 [package.extras]
 docs = ["Sphinx (>=6.1.3,<7.0.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/Lookyloo/PyLookyloo.git"
+reference = "HEAD"
+resolved_reference = "a770ea690ff313aa0bbdb20d59145fbabe4370ef"
 
 [[package]]
 name = "pyrsistent"
@@ -2705,6 +2725,24 @@ MarkupSafe = ">=2.1.1"
 watchdog = ["watchdog"]
 
 [[package]]
+name = "wtforms"
+version = "3.0.1"
+description = "Form validation and rendering for Python web development."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "WTForms-3.0.1-py3-none-any.whl", hash = "sha256:837f2f0e0ca79481b92884962b914eba4e72b7a2daaf1f939c890ed0124b834b"},
+    {file = "WTForms-3.0.1.tar.gz", hash = "sha256:6b351bbb12dd58af57ffef05bc78425d08d1914e0fd68ee14143b7ade023c5bc"},
+]
+
+[package.dependencies]
+MarkupSafe = "*"
+
+[package.extras]
+email = ["email-validator"]
+
+[[package]]
 name = "y-py"
 version = "0.5.5"
 description = "Python bindings for the Y-CRDT built from yrs (Rust)"
@@ -2772,4 +2810,4 @@ test = ["mypy", "pre-commit", "pytest", "pytest-asyncio", "websockets (>=10.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "54987f4a4bcae24639e87995161d181b5560025aacd2d4e560efb988dd9e1c17"
+content-hash = "c96c6c28331d49374ecde1b3dd969d29b26edfac47e3130b2869c4dd995eb475"
