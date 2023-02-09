@@ -4,6 +4,7 @@ from importlib.metadata import version
 from typing import Dict, Any
 
 from flask import Flask, request
+from flask_bootstrap import Bootstrap5
 from flask_restx import Api, Resource, fields  # type: ignore
 
 from webmonitoring.webmonitoring import Monitoring
@@ -12,10 +13,15 @@ from .helpers import get_secret_key
 from .proxied import ReverseProxied
 
 app: Flask = Flask(__name__)
-
 app.wsgi_app = ReverseProxied(app.wsgi_app)  # type: ignore
 
 app.config['SECRET_KEY'] = get_secret_key()
+
+Bootstrap5(app)
+app.config['BOOTSTRAP_SERVE_LOCAL'] = True
+app.config['SESSION_COOKIE_NAME'] = 'lookyloo_webmonitoring'
+app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+app.debug = False
 
 api = Api(app, title='Web Monitoring API',
           description='API to query the web monitoring.',
@@ -54,7 +60,15 @@ class Monitor(Resource):
         monit: Dict[str, Any] = request.get_json(force=True)  # type: ignore
         monitor_uuid = monitoring.monitor(monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'))
-        # TODO: get that somewhere else.
-        monitoring.update_monitoring_queue()
-        monitoring.process_monitoring_queue()
         return monitor_uuid
+
+
+@api.route('/json/<string:monitor_uuid>')
+@api.doc(description='Compare the captures for a specific monitored entry',
+         params={'monitor_uuid': 'The monitoring UUID'})
+class Compare(Resource):
+
+    def get(self, monitor_uuid: str):
+        a = monitoring.compare_captures(monitor_uuid)
+        print(a)
+        return a

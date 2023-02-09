@@ -12,6 +12,7 @@ from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
 from .default import get_config, get_socket_path
+from .helpers import get_useragent_for_requests
 
 
 class Monitoring():
@@ -22,11 +23,10 @@ class Monitoring():
 
         self.redis_pool: ConnectionPool = ConnectionPool(connection_class=UnixDomainSocketConnection,
                                                          path=get_socket_path('cache'), decode_responses=True)
-        # TODO: configurable URL, useragent
-        self.lookyloo = Lookyloo()
+        self.lookyloo = Lookyloo(root_url=get_config('generic', 'lookyloo_url'),
+                                 useragent=get_useragent_for_requests())
 
         # Pop a range of keys
-        # local elems = redis.call('ZRANGE', key, 0, now, 'BYSCORE')
         lua = """
         local key = KEYS[1]
         local now = ARGV[1]
@@ -66,10 +66,22 @@ class Monitoring():
         p.execute()
         return monitor_uuid
 
+    def compare_captures(self, monitor_uuid: str):
+        if not self.redis.exists(f'{monitor_uuid}:captures'):
+            raise Exception(f'Monitoring UUID unknown: {monitor_uuid}')
+        # Get all the capture UUIDs from most recent to oldest
+        capture_uuids = self.redis.zrevrangebyscore(f'{monitor_uuid}:captures', '+Inf', 0, withscores=True)
+        if len(capture_uuids) < 2:
+            raise Exception(f'Only one capture, nothing to compare ({monitor_uuid})')
+        # For now, only compare the last two captures, later we will compare more
+        compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
+        return compare_result
+
     def update_monitoring_queue(self):
         for monitor_uuid in self.redis.smembers('monitored'):
             if self.redis.zscore('monitoring_queue', monitor_uuid):
-                # don't do anythfing, let the next capture happen
+                # don't do anything, let the next capture happen
+                # FIXME: Probaby change that if the interval is shorter than the next capture (=> changed)
                 continue
             _expire = self.redis.get(f'{monitor_uuid}:expire')
             if _expire and datetime.now().timestamp() < _expire:
@@ -79,12 +91,15 @@ class Monitoring():
             freq = self.redis.get(f'{monitor_uuid}:frequency')
             # WIP, few hardcoded values - later, use the cron format too
             next_run = {monitor_uuid: 0.0}
-            if freq == 'hourly':
-                next_run[monitor_uuid] = (datetime.now() + timedelta(hours=1)).timestamp()
-            elif freq == 'daily':
-                next_run[monitor_uuid] = (datetime.now() + timedelta(days=1)).timestamp()
+            if not self.redis.exists(f'{monitor_uuid}:captures'):
+                next_run[monitor_uuid] = datetime.now().timestamp()
             else:
-                raise Exception(f'Frequency unsupported: {freq}')
+                if freq == 'hourly':
+                    next_run[monitor_uuid] = (datetime.now() + timedelta(hours=1)).timestamp()
+                elif freq == 'daily':
+                    next_run[monitor_uuid] = (datetime.now() + timedelta(days=1)).timestamp()
+                else:
+                    raise Exception(f'Frequency unsupported: {freq}')
             self.redis.zadd('monitoring_queue', mapping=next_run)
 
     def process_monitoring_queue(self):
@@ -93,5 +108,5 @@ class Monitoring():
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             settings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
             new_capture_uuid = self.lookyloo.enqueue(**settings, quiet=True)
-            if self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
+            if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
                 self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
