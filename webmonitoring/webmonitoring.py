@@ -5,7 +5,7 @@ import logging
 from uuid import uuid4
 
 from datetime import datetime, timedelta
-from typing import MutableMapping, Any, Optional, Union, List, Dict
+from typing import MutableMapping, Any, Optional, Union, List, Dict, Tuple
 
 from pylookyloo import Lookyloo
 from redis import ConnectionPool, Redis
@@ -45,11 +45,20 @@ class Monitoring():
     def check_redis_up(self):
         return self.redis.ping()
 
-    def get_monitored(self, can_compare_only: bool=False) -> List[str]:
-        monitored = self.redis.smembers('monitored')
-        if not can_compare_only:
-            return monitored
-        return [m for m in monitored if self.redis.zcard(f'{m}:captures') > 1]
+    def get_collections(self):
+        return self.redis.smembers('collections')
+
+    def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
+        key = 'monitored'
+        if collection:
+            key = f'{key}:{collection}'
+        to_return = []
+        for m in self.redis.sscan_iter(key):
+            details = {'status': (True, '')}
+            if self.redis.zcard(f'{m}:captures') < 2:
+                details['status'] = (False, 'Cannot compare, not enough captures.')
+            to_return.append((m, details))
+        return to_return
 
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
@@ -62,6 +71,8 @@ class Monitoring():
         p.set(f'{monitor_uuid}:frequency', frequency)
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
+            p.sadd('collections', collection)
+            p.sadd(f'monitored:{collection}', monitor_uuid)
         if expire_at:
             if isinstance(expire_at, (str, int, float)):
                 _expire = float(expire_at)
@@ -82,7 +93,7 @@ class Monitoring():
         capture_uuids = self.redis.zrevrangebyscore(f'{monitor_uuid}:captures', '+Inf', 0, withscores=True)
         if len(capture_uuids) < 2:
             raise Exception(f'Only one capture, nothing to compare ({monitor_uuid})')
-        # For now, only compare the last two captures, later we will compare more
+        # NOTE For now, only compare the last two captures, later we will compare more
         compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
         return compare_result
 

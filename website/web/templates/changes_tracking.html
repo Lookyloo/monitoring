@@ -45,6 +45,24 @@
         {%endif%}
 
       {% elif k == 'ressources' %}
+      <li>Ressources in both captures:</li>
+      <ul>
+        {% for url in info['both']%}
+        <li>{{url}}</li>
+        {% endfor %}
+      </ul>
+      <li>Ressources in moth recent capture only:</li>
+      <ul>
+        {% for url in info['left']%}
+        <li>{{url}}</li>
+        {% endfor %}
+      </ul>
+      <li>Ressources in oldest capture only:</li>
+      <ul>
+        {% for url in info['right']%}
+        <li>{{url}}</li>
+        {% endfor %}
+      </ul>
       {%endif%}
     {% endfor %}
     </ul>

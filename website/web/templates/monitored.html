@@ -9,13 +9,21 @@
     <tr>
       <th scope="col">#</th>
       <th scope="col">URL</th>
+      <th scope="col">Status</th>
     </tr>
     </thead>
     <tbody>
-    {% for uuid, monitored_url in monitored_index %}
+    {% for uuid, monitored_url, details in monitored_index %}
     <tr>
-        <th scope="row"><a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a></th>
+      <th scope="row">
+        {% if details['status'][0] %}
+          <a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a>
+        {% else %}
+          {{uuid}}
+        {%endif%}
+      </th>
       <td>{{monitored_url}}</td>
+      <td>{{details['status'][1]}}</td>
     </tr>
     {% endfor %}
     </tbody>

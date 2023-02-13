@@ -3,7 +3,7 @@
 import json
 
 from importlib.metadata import version
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from flask import Flask, request, render_template
 from flask_bootstrap import Bootstrap5  # type: ignore
@@ -28,15 +28,22 @@ app.debug = False
 monitoring: Monitoring = Monitoring()
 
 
+@app.route('/collections', methods=['GET'])
+def collections():
+    collections = monitoring.get_collections()
+    return render_template('collections.html', collections=collections)
+
+
 @app.route('/monitored', methods=['GET'])
-def monitored():
+@app.route('/monitored/<string:collection>', methods=['GET'])
+def monitored(collection: Optional[str]=None):
     if request.method == 'HEAD':
         # Just returns ack if the webserver is running
         return 'Ack'
-    monitored_index: List[Tuple[str, str]] = []
-    for uuid in monitoring.get_monitored(can_compare_only=True):
+    monitored_index: List[Tuple[str, str, Dict[str, Any]]] = []
+    for uuid, details in monitoring.get_monitored(collection=collection):
         settings = monitoring.get_monitored_settings(uuid)
-        monitored_index.append((uuid, settings['url']))
+        monitored_index.append((uuid, settings['url'], details))
     return render_template('monitored.html', monitored_index=monitored_index)
 
 
