@@ -5,8 +5,51 @@
 {% block content %}
 
 <div class="container">
+    <ul>
+    {% for k, info in changes.items() %}
+      {% if k in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'redirects'] %}
+        {% if k == 'redirects' %}
+        <li>{{ info['length']['message'] }} ({{info['length']['details']}})</li>
+        <li>Nodes to the landing page</li>
+        <ol class="list-group-numbered">
+        {%for node_details in info['nodes']%}
+            {%for _, node in node_details.items() %}
+            <li class="list-group-item">{{node['message']}}
+                {% if node['details'] is string or node['details'] is integer %}
+                    ({{node['details']}})
+                {%else%}
+                    <ul>
+                        {% for entry in node['details'] %}
+                        <li>{{entry}}</li>
+                        {% endfor %}
+                    </ul>
+                {%endif%}
+            </li>
+            {% endfor %}
+
+        {% endfor %}
+        </ol>
+
+        {% else %}
+        <li>{{info['message']}}
+            {% if info['details'] is string or info['details'] is integer %}
+                ({{info['details']}})
+            {%else%}
+                <ul>
+                    {% for entry in info['details'] %}
+                    <li>{{entry}}</li>
+                    {% endfor %}
+                </ul>
+            {%endif%}
+        </li>
+        {%endif%}
+
+      {% elif k == 'ressources' %}
+      {%endif%}
+    {% endfor %}
+    </ul>
   <pre>
-  {{changes}}
+  {{changes_txt}}
   </pre>
 </div>
 

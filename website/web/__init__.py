@@ -43,7 +43,9 @@ def monitored():
 @app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])
 def changes_tracking(monitor_uuid: str):
     changes = monitoring.compare_captures(monitor_uuid)
-    return render_template('changes_tracking.html', changes=json.dumps(changes, indent=2))
+    return render_template('changes_tracking.html',
+                           changes=changes,
+                           changes_txt=json.dumps(changes, indent=2))
 
 
 api = Api(app, title='Web Monitoring API',
