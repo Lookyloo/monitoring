@@ -13,6 +13,7 @@ from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
 from .default import get_config, get_socket_path
+from .exceptions import TimeError, CannotCompare
 from .helpers import get_useragent_for_requests
 
 
@@ -58,6 +59,9 @@ class Monitoring():
             details = {'status': (True, '')}
             if self.redis.zcard(f'{m}:captures') < 2:
                 details['status'] = (False, 'Cannot compare, not enough captures.')
+            if expire := self.redis.get(f'{m}:expire'):
+                if float(expire) <= datetime.now().timestamp():
+                    details['status'] = (True, 'Not monitored anymore.')
             to_return.append((m, details))
         return to_return
 
@@ -81,19 +85,26 @@ class Monitoring():
                 _expire = expire_at.timestamp()
             if _expire < datetime.now().timestamp():
                 # The expiration time is in the past.
-                raise Exception('Expiration time in the past.')
+                raise TimeError('Expiration time in the past.')
             p.set(f'{monitor_uuid}:expire', _expire)
         p.sadd('monitored', monitor_uuid)
         p.execute()
         return monitor_uuid
 
+    def stop_monitor(self, monitor_uuid: str) -> bool:
+        p = self.redis.pipeline()
+        p.set(f'{monitor_uuid}:expire', datetime.now().timestamp())
+        p.zrem('monitoring_queue', monitor_uuid)
+        p.execute()
+        return True
+
     def compare_captures(self, monitor_uuid: str):
         if not self.redis.exists(f'{monitor_uuid}:captures'):
-            raise Exception(f'Monitoring UUID unknown: {monitor_uuid}')
+            raise CannotCompare(f'Monitoring UUID unknown: {monitor_uuid}')
         # Get all the capture UUIDs from most recent to oldest
         capture_uuids = self.redis.zrevrangebyscore(f'{monitor_uuid}:captures', '+Inf', 0, withscores=True)
         if len(capture_uuids) < 2:
-            raise Exception(f'Only one capture, nothing to compare ({monitor_uuid})')
+            raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
         compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
         return compare_result
@@ -126,7 +137,7 @@ class Monitoring():
                         schedule = cron.schedule(reference)
                         next_run[monitor_uuid] = schedule.next().timestamp()
                     except Exception as e:
-                        raise Exception(f'Frequency ({freq}) unsupported: {e}')
+                        raise TimeError(f'Frequency ({freq}) unsupported: {e}')
             self.redis.zadd('monitoring_queue', mapping=next_run)
 
     def process_monitoring_queue(self):

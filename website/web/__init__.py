@@ -87,10 +87,19 @@ class Monitor(Resource):
 
     @api.doc(body=monitor_fields_post)
     def post(self):
-        monit: Dict[str, Any] = request.get_json(force=True)  # type: ignore
+        monit: Dict[str, Any] = request.get_json(force=True)
         monitor_uuid = monitoring.monitor(monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'))
         return monitor_uuid
+
+
+@api.route('/stop_monitor/<string:monitor_uuid>')
+@api.doc(description='Stop monitoring',
+         params={'monitor_uuid': 'The monitoring UUID'})
+class StopMonitor(Resource):
+
+    def get(self, monitor_uuid: str):
+        return monitoring.stop_monitor(monitor_uuid)
 
 
 @api.route('/json/changes/<string:monitor_uuid>')
