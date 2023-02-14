@@ -93,10 +93,29 @@ class Monitor(Resource):
         return monitor_uuid
 
 
-@api.route('/json/<string:monitor_uuid>')
+@api.route('/json/changes/<string:monitor_uuid>')
 @api.doc(description='Compare the captures for a specific monitored entry',
          params={'monitor_uuid': 'The monitoring UUID'})
-class Compare(Resource):
+class JsonCompare(Resource):
 
     def get(self, monitor_uuid: str):
         return monitoring.compare_captures(monitor_uuid)
+
+
+@api.route('/json/collections')
+@api.doc(description='Get the list of existing collections')
+class JsonCollections(Resource):
+
+    def get(self):
+        return list(monitoring.get_collections())
+
+
+@api.route('/json/monitored',
+           doc={'description': 'Get the list of monitored UUIDs'})
+@api.route('/json/monitored/<string:collection>',
+           doc={'description': 'Get the list of monitored UUIDs, for a specific collection',
+                'collection': 'Limit the response to a specific collection'})
+class JsonMonitored(Resource):
+
+    def get(self, collection: Optional[str]=None):
+        return monitoring.get_monitored(collection)

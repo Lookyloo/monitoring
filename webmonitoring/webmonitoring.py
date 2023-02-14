@@ -7,6 +7,7 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 from typing import MutableMapping, Any, Optional, Union, List, Dict, Tuple
 
+from cron_converter import Cron  # type: ignore
 from pylookyloo import Lookyloo
 from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
@@ -119,7 +120,13 @@ class Monitoring():
                 elif freq == 'daily':
                     next_run[monitor_uuid] = (datetime.now() + timedelta(days=1)).timestamp()
                 else:
-                    raise Exception(f'Frequency unsupported: {freq}')
+                    try:
+                        cron = Cron(freq)
+                        reference = datetime.now()
+                        schedule = cron.schedule(reference)
+                        next_run[monitor_uuid] = schedule.next().timestamp()
+                    except Exception as e:
+                        raise Exception(f'Frequency ({freq}) unsupported: {e}')
             self.redis.zadd('monitoring_queue', mapping=next_run)
 
     def process_monitoring_queue(self):
