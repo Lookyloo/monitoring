@@ -51,11 +51,10 @@ class Monitoring():
         return self.redis.smembers('collections')
 
     def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
-        key = 'monitored'
-        if collection:
-            key = f'{key}:{collection}'
         to_return = []
-        for m in self.redis.sscan_iter(key):
+        for m in self.redis.sscan_iter('monitored'):
+            if collection and not self.redis.sismember(f'collections:{collection}', m):
+                continue
             details = {'status': (True, '')}
             if self.redis.zcard(f'{m}:captures') < 2:
                 details['status'] = (False, 'Cannot compare, not enough captures.')
@@ -77,7 +76,7 @@ class Monitoring():
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
             p.sadd('collections', collection)
-            p.sadd(f'monitored:{collection}', monitor_uuid)
+            p.sadd(f'collections:{collection}', monitor_uuid)
         if expire_at:
             if isinstance(expire_at, (str, int, float)):
                 _expire = float(expire_at)
@@ -118,7 +117,7 @@ class Monitoring():
             _expire = self.redis.get(f'{monitor_uuid}:expire')
             if _expire and datetime.now().timestamp() > float(_expire):
                 # Monitoring expired
-                self.redis.smove('monitored', 'expired_monitored', monitor_uuid)
+                self.redis.smove('monitored', 'expired', monitor_uuid)
                 continue
             freq = self.redis.get(f'{monitor_uuid}:frequency')
             # WIP, few hardcoded values - later, use the cron format too
