@@ -35,21 +35,37 @@ def collections():
     return render_template('collections.html', collections=collections)
 
 
-@app.route('/monitored', methods=['GET'])
-@app.route('/monitored/<string:collection>', methods=['GET'])
-def monitored(collection: Optional[str]=None):
+def _index(index_type: str, collection: Optional[str]):
     if request.method == 'HEAD':
         # Just returns ack if the webserver is running
         return 'Ack'
-    monitored_index: List[Tuple[str, str, Dict[str, Any]]] = []
-    for uuid, details in monitoring.get_monitored(collection=collection):
+    index: List[Tuple[str, str, Dict[str, Any], str]] = []
+    if index_type == 'monitored':
+        to_index = monitoring.get_monitored(collection=collection)
+    elif index_type == 'expired':
+        to_index = monitoring.get_expired(collection=collection)
+    else:
+        raise Exception(f'Can only be monitored or expired, not {index_type}')
+    for uuid, details in to_index:
         settings = monitoring.get_monitored_settings(uuid)
         try:
             next_capture = monitoring.get_next_capture(uuid).isoformat()
         except TimeError:
             next_capture = 'No capture scheduled'
-        monitored_index.append((uuid, settings['url'], details, next_capture))
-    return render_template('monitored.html', monitored_index=monitored_index)
+        index.append((uuid, settings['url'], details, next_capture))
+    return render_template('monitored.html', monitored_index=index)
+
+
+@app.route('/monitored', methods=['GET'])
+@app.route('/monitored/<string:collection>', methods=['GET'])
+def monitored(collection: Optional[str]=None):
+    return _index('monitored', collection)
+
+
+@app.route('/expired', methods=['GET'])
+@app.route('/expired/<string:collection>', methods=['GET'])
+def expired(collection: Optional[str]=None):
+    return _index('expired', collection)
 
 
 @app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])

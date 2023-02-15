@@ -50,9 +50,15 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
+    def get_expired(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
+        return self._get_index('expired', collection)
+
     def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
+        return self._get_index('monitored', collection)
+
+    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Any]]]:
         to_return = []
-        for m in self.redis.sscan_iter('monitored'):
+        for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
                 continue
             details = {'status': (True, '')}
