@@ -10,10 +10,12 @@
       <th scope="col">#</th>
       <th scope="col">URL</th>
       <th scope="col">Status</th>
+      <th scope="col">Next capture</th>
+      <th scope="col">Stop monitoring</th>
     </tr>
     </thead>
     <tbody>
-    {% for uuid, monitored_url, details in monitored_index %}
+    {% for uuid, monitored_url, details, next_capture in monitored_index %}
     <tr>
       <th scope="row">
         {% if details['status'][0] %}
@@ -24,12 +26,16 @@
       </th>
       <td>{{monitored_url}}</td>
       <td>{{details['status'][1]}}</td>
+      <td>{{next_capture}}</td>
+      <td>
+        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=uuid)}}" onsubmit="location.reload();" target="ignore">
+          <button type="submit" class="btn btn-primary">Stop</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
-
-
-
+<iframe name="ignore" src="about:blank" style="display:none;"></iframe>
 {% endblock %}

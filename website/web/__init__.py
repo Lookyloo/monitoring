@@ -9,6 +9,7 @@ from flask import Flask, request, render_template
 from flask_bootstrap import Bootstrap5  # type: ignore
 from flask_restx import Api, Resource, fields  # type: ignore
 
+from webmonitoring.exceptions import TimeError
 from webmonitoring.webmonitoring import Monitoring
 
 from .helpers import get_secret_key
@@ -43,7 +44,11 @@ def monitored(collection: Optional[str]=None):
     monitored_index: List[Tuple[str, str, Dict[str, Any]]] = []
     for uuid, details in monitoring.get_monitored(collection=collection):
         settings = monitoring.get_monitored_settings(uuid)
-        monitored_index.append((uuid, settings['url'], details))
+        try:
+            next_capture = monitoring.get_next_capture(uuid).isoformat()
+        except TimeError:
+            next_capture = 'No capture scheduled'
+        monitored_index.append((uuid, settings['url'], details, next_capture))
     return render_template('monitored.html', monitored_index=monitored_index)
 
 
@@ -98,7 +103,7 @@ class Monitor(Resource):
          params={'monitor_uuid': 'The monitoring UUID'})
 class StopMonitor(Resource):
 
-    def get(self, monitor_uuid: str):
+    def post(self, monitor_uuid: str):
         return monitoring.stop_monitor(monitor_uuid)
 
 

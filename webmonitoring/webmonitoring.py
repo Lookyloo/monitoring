@@ -116,7 +116,7 @@ class Monitoring():
                 # FIXME: Probaby change that if the interval is shorter than the next capture (=> changed)
                 continue
             _expire = self.redis.get(f'{monitor_uuid}:expire')
-            if _expire and datetime.now().timestamp() < _expire:
+            if _expire and datetime.now().timestamp() > float(_expire):
                 # Monitoring expired
                 self.redis.smove('monitored', 'expired_monitored', monitor_uuid)
                 continue
@@ -139,6 +139,12 @@ class Monitoring():
                     except Exception as e:
                         raise TimeError(f'Frequency ({freq}) unsupported: {e}')
             self.redis.zadd('monitoring_queue', mapping=next_run)
+
+    def get_next_capture(self, monitor_uuid: str) -> datetime:
+        ts = self.redis.zscore('monitoring_queue', monitor_uuid)
+        if not ts:
+            raise TimeError('No scheduled capture')
+        return datetime.fromtimestamp(ts)
 
     def process_monitoring_queue(self):
         now = datetime.now().timestamp()
