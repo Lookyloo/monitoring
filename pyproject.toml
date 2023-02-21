@@ -31,8 +31,8 @@ bootstrap-flask = "^2.2.0"
 pylookyloo = {git = "https://github.com/Lookyloo/PyLookyloo.git"}
 
 [tool.poetry.dev-dependencies]
-mypy = "^1.0.0"
-types-redis = "^4.5.1.1"
+mypy = "^1.0.1"
+types-redis = "^4.5.1.2"
 
 [build-system]
 requires = ["poetry-core>=1.2.0"]
