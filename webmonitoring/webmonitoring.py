@@ -5,7 +5,7 @@ import logging
 from uuid import uuid4
 
 from datetime import datetime, timedelta
-from typing import MutableMapping, Any, Optional, Union, List, Dict, Tuple
+from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict
 
 from cron_converter import Cron  # type: ignore
 from pylookyloo import Lookyloo
@@ -15,6 +15,31 @@ from redis.connection import UnixDomainSocketConnection
 from .default import get_config, get_socket_path
 from .exceptions import TimeError, CannotCompare
 from .helpers import get_useragent_for_requests
+
+
+class CaptureSettings(TypedDict, total=False):
+    '''The capture settings that can be passed to Lookyloo.'''
+
+    url: Optional[str]
+    document_name: Optional[str]
+    document: Optional[str]
+    browser: Optional[str]
+    device_name: Optional[str]
+    user_agent: Optional[str]
+    proxy: Optional[Union[str, Dict[str, str]]]
+    general_timeout_in_sec: Optional[int]
+    cookies: Optional[List[Dict[str, Any]]]
+    headers: Optional[Union[str, Dict[str, str]]]
+    http_credentials: Optional[Dict[str, int]]
+    viewport: Optional[Dict[str, int]]
+    referer: Optional[str]
+
+
+class MonitorSettings(TypedDict, total=False):
+    capture_settings: CaptureSettings
+    frequency: str
+    expire_at: Optional[str]
+    collection: Optional[str]
 
 
 class Monitoring():
@@ -50,13 +75,13 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
-    def get_expired(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
+    def get_expired(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
         return self._get_index('expired', collection)
 
-    def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Any]]]:
+    def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
         return self._get_index('monitored', collection)
 
-    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Any]]]:
+    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
         to_return = []
         for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
@@ -73,8 +98,9 @@ class Monitoring():
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
 
-    def monitor(self, capture_settings: MutableMapping[str, Any], /, frequency: str, *,
-                expire_at: Optional[Union[datetime, str, int, float]]=None, collection: Optional[str]=None):
+    def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
+                expire_at: Optional[Union[datetime, str, int, float]]=None,
+                collection: Optional[str]=None) -> str:
         monitor_uuid = str(uuid4())
         p = self.redis.pipeline()
         p.hset(f'{monitor_uuid}:capture_settings', mapping=capture_settings)
@@ -155,6 +181,6 @@ class Monitoring():
         now = datetime.now().timestamp()
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             settings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
-            new_capture_uuid = self.lookyloo.enqueue(**settings, quiet=True)
+            new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
             if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
                 self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})

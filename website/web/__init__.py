@@ -29,6 +29,11 @@ app.debug = False
 monitoring: Monitoring = Monitoring()
 
 
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
+
+
 @app.route('/collections', methods=['GET'])
 def collections():
     collections = monitoring.get_collections()
@@ -78,6 +83,7 @@ def changes_tracking(monitor_uuid: str):
 
 api = Api(app, title='Web Monitoring API',
           description='API to query the web monitoring.',
+          doc='/doc/',
           version=version('webmonitoring'))
 
 
@@ -149,3 +155,14 @@ class JsonMonitored(Resource):
 
     def get(self, collection: Optional[str]=None):
         return monitoring.get_monitored(collection)
+
+
+@api.route('/json/expired',
+           doc={'description': 'Get the list of expired UUIDs'})
+@api.route('/json/expired/<string:collection>',
+           doc={'description': 'Get the list of expired UUIDs, for a specific collection',
+                'collection': 'Limit the response to a specific collection'})
+class JsonExpired(Resource):
+
+    def get(self, collection: Optional[str]=None):
+        return monitoring.get_expired(collection)

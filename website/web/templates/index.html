@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Collections{% endblock %}
+
+{% block content %}
+<div class="container">
+  <ol>
+    <li><a href="{{ url_for('collections')}}">Collections</a></li>
+    <li><a href="{{ url_for('monitored')}}">Monitored</a></li>
+    <li><a href="{{ url_for('expired')}}">Expired</a></li>
+  </ol>
+</div>
+
+
+
+{% endblock %}
