@@ -91,7 +91,7 @@ class Monitoring():
         return to_return
 
     def get_monitored_details(self, monitor_uuid: str) -> Dict[str, Any]:
-        to_return = {}
+        to_return: Dict[str, Any] = {}
         to_return['capture_settings'] = self.get_monitored_settings(monitor_uuid)
         try:
             to_return['next_capture'] = self.get_next_capture(monitor_uuid)
