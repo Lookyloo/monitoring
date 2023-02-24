@@ -65,6 +65,11 @@ class Monitoring():
         """
         self.redis_zpoprangebyscore = self.redis.register_script(lua)
 
+        # If for any reason the config is broken, we want that to fail hard.
+        self.min_frequency = int(get_config('generic', 'min_frequency'))
+        self.max_captures = int(get_config('generic', 'max_captures'))
+        self.force_expire = get_config('generic', 'force_expire')
+
     @property
     def redis(self):
         return Redis(connection_pool=self.redis_pool)
@@ -107,6 +112,15 @@ class Monitoring():
 
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
+
+    def _next_run_from_cron(self, cron_string: str) -> datetime:
+        try:
+            cron = Cron(cron_string)
+            reference = datetime.now()
+            schedule = cron.schedule(reference)
+            return schedule.next()
+        except ValueError as e:
+            raise TimeError(f'Invalid cron format: {cron_string} - {e}')
 
     def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
@@ -161,10 +175,16 @@ class Monitoring():
                 # Monitoring expired
                 self.redis.smove('monitored', 'expired', monitor_uuid)
                 continue
+            elif self.force_expire and self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures:
+                # Force expire monitoring
+                self.redis.smove('monitored', 'expired', monitor_uuid)
+                continue
+
             freq = self.redis.get(f'{monitor_uuid}:frequency')
             # WIP, few hardcoded values - later, use the cron format too
             next_run = {monitor_uuid: 0.0}
             if not self.redis.exists(f'{monitor_uuid}:captures'):
+                # if the capture was triggered recently enough on lookyloo, it will just pick the capture UUID
                 next_run[monitor_uuid] = datetime.now().timestamp()
             else:
                 if freq == 'hourly':
@@ -173,12 +193,15 @@ class Monitoring():
                     next_run[monitor_uuid] = (datetime.now() + timedelta(days=1)).timestamp()
                 else:
                     try:
-                        cron = Cron(freq)
-                        reference = datetime.now()
-                        schedule = cron.schedule(reference)
-                        next_run[monitor_uuid] = schedule.next().timestamp()
-                    except Exception as e:
-                        raise TimeError(f'Frequency ({freq}) unsupported: {e}')
+                        next_run[monitor_uuid] = self._next_run_from_cron(freq).timestamp()
+                    except TimeError as e:
+                        self.logger.warning(f'Invalid cron string: {e}')
+                        next_run[monitor_uuid] = (datetime.now() + timedelta(seconds=self.min_frequency + 60)).timestamp()
+                # Make sure the next capture is not scheduled for in a too short interval
+                interval_next_capture = next_run[monitor_uuid] - datetime.now().timestamp()
+                if interval_next_capture < self.min_frequency:
+                    self.logger.warning(f'The next capture is scheduled too soon: {interval_next_capture}s. Minimal interval: {self.min_frequency}s.')
+                    next_run[monitor_uuid] = (datetime.now() + timedelta(seconds=self.min_frequency)).timestamp()
             self.redis.zadd('monitoring_queue', mapping=next_run)
 
     def get_next_capture(self, monitor_uuid: str) -> datetime:

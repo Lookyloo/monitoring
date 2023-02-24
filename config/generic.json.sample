@@ -4,11 +4,17 @@
     "website_listen_port": 5200,
     "systemd_service_name": "webmonitoring",
     "lookyloo_url": "http://127.0.0.1:5100",
+    "min_frequency": 3000,
+    "max_captures": 10,
+    "force_expire": true,
     "_notes": {
         "loglevel": "Can be one of the value listed here: https://docs.python.org/3/library/logging.html#levels",
         "website_listen_ip": "IP Flask will listen on. Defaults to 0.0.0.0, meaning all interfaces.",
         "website_listen_port": "Port Flask will listen on.",
         "systemd_service_name": "(Optional) Name of the systemd service if your project has one.",
-        "lookyloo_url": "The URL of the Lookyloo instance to use for the captures."
+        "lookyloo_url": "The URL of the Lookyloo instance to use for the captures.",
+        "min_frequency": "Do not schedule captures more often than this value (mist be an int, in seconds)",
+        "max_captures": "Automatically expire the monitoring when this amount of captures has been triggered.",
+        "force_expire": "If true, the expiring time will be set to a maximum of the frequency (provded by the user, or min_frequency if higher) * the max amount of captures."
     }
 }
