@@ -5,70 +5,98 @@
 {% block content %}
 
 <div class="container">
-    <ul>
-    {% for k, info in changes.items() %}
-      {% if k in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'redirects'] %}
-        {% if k == 'redirects' %}
-        <li>{{ info['length']['message'] }} ({{info['length']['details']}})</li>
-        <li>Nodes to the landing page</li>
-        <ol class="list-group-numbered">
-        {%for node_details in info['nodes']%}
-            {%for _, node in node_details.items() %}
-            <li class="list-group-item">{{node['message']}}
-                {% if node['details'] is string or node['details'] is integer %}
-                    ({{node['details']}})
-                {%else%}
-                    <ul>
-                        {% for entry in node['details'] %}
-                        <li>{{entry}}</li>
-                        {% endfor %}
-                    </ul>
-                {%endif%}
-            </li>
-            {% endfor %}
+  <ul>
+    <li>Capture settings:
+      <pre>
+      {{details['capture_settings']}}
+      </pre>
+    </li>
+    {% if 'next_capture' in details%}
+    <li>Next capture: {{details['next_capture'].isoformat() }}</li>
+    {%endif%}
+    {% if details['number_captures'] == 0%}
+    <li>No captures available</li>
+    {% elif details['number_captures'] == 1%}
+    <li>Only one capture available, cannot compare yet.</li>
+    {%else%}
+    <li>{{details['number_captures']}} captures available.</li>
+    <li>Last one triggered at {{details['last_capture'].isoformat()}}</li>
+    {%endif%}
+  </ul>
+  <hr>
+  {% if 'error' in changes %}
+  Unable to compare: {{changes['error']}}
+  </br>
+  <pre>
+    {{changes['details']}}
+  </pre>
+  {% else %}
+   Comparison of the two most recent captures:
+   <ul>
+   {% for k, info in changes.items() %}
+     {% if k in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'redirects'] %}
+       {% if k == 'redirects' %}
+       <li>{{ info['length']['message'] }} ({{info['length']['details']}})</li>
+       <li>Nodes to the landing page</li>
+       <ol class="list-group-numbered">
+       {%for node_details in info['nodes']%}
+           {%for _, node in node_details.items() %}
+           <li class="list-group-item">{{node['message']}}
+               {% if node['details'] is string or node['details'] is integer %}
+                   ({{node['details']}})
+               {%else%}
+                   <ul>
+                       {% for entry in node['details'] %}
+                       <li>{{entry}}</li>
+                       {% endfor %}
+                   </ul>
+               {%endif%}
+           </li>
+           {% endfor %}
 
-        {% endfor %}
-        </ol>
+       {% endfor %}
+       </ol>
 
-        {% else %}
-        <li>{{info['message']}}
-            {% if info['details'] is string or info['details'] is integer %}
-                ({{info['details']}})
-            {%else%}
-                <ul>
-                    {% for entry in info['details'] %}
-                    <li>{{entry}}</li>
-                    {% endfor %}
-                </ul>
-            {%endif%}
-        </li>
-        {%endif%}
+       {% else %}
+       <li>{{info['message']}}
+           {% if info['details'] is string or info['details'] is integer %}
+               ({{info['details']}})
+           {%else%}
+               <ul>
+                   {% for entry in info['details'] %}
+                   <li>{{entry}}</li>
+                   {% endfor %}
+               </ul>
+           {%endif%}
+       </li>
+       {%endif%}
 
-      {% elif k == 'ressources' %}
-      <li>Ressources in both captures:</li>
-      <ul>
-        {% for url in info['both']%}
-        <li>{{url}}</li>
-        {% endfor %}
-      </ul>
-      <li>Ressources in moth recent capture only:</li>
-      <ul>
-        {% for url in info['left']%}
-        <li>{{url}}</li>
-        {% endfor %}
-      </ul>
-      <li>Ressources in oldest capture only:</li>
-      <ul>
-        {% for url in info['right']%}
-        <li>{{url}}</li>
-        {% endfor %}
-      </ul>
-      {%endif%}
-    {% endfor %}
-    </ul>
+     {% elif k == 'ressources' %}
+     <li>Ressources in both captures:</li>
+     <ul>
+       {% for url in info['both']%}
+       <li>{{url}}</li>
+       {% endfor %}
+     </ul>
+     <li>Ressources in moth recent capture only:</li>
+     <ul>
+       {% for url in info['left']%}
+       <li>{{url}}</li>
+       {% endfor %}
+     </ul>
+     <li>Ressources in oldest capture only:</li>
+     <ul>
+       {% for url in info['right']%}
+       <li>{{url}}</li>
+       {% endfor %}
+     </ul>
+     {%endif%}
+   {% endfor %}
+   </ul>
   <pre>
   {{changes_txt}}
   </pre>
+  {% endif %}
 </div>
 
 

@@ -7,15 +7,17 @@
   <table class="table">
     <thead>
     <tr>
-      <th scope="col">#</th>
-      <th scope="col">URL</th>
+      <th scope="col">Name</th>
+      <th scope="col">Ongoing</th>
+      <th scope="col">Expired</th>
     </tr>
     </thead>
     <tbody>
     {% for collection in collections %}
     <tr>
-        <th scope="row">{{loop.index}}</th>
-      <td><a href="{{ url_for('monitored', collection=collection)}}">{{collection}}</a></td>
+      <th scope="row">{{collection}}</th>
+      <td><a href="{{ url_for('monitored', collection=collection)}}">See ongoing</a></td>
+      <td><a href="{{ url_for('expired', collection=collection)}}">See expired</a></td>
     </tr>
     {% endfor %}
     </tbody>

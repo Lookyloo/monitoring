@@ -9,29 +9,37 @@
     <tr>
       <th scope="col">#</th>
       <th scope="col">URL</th>
-      <th scope="col">Status</th>
+      <th scope="col">Last capture</th>
       <th scope="col">Next capture</th>
-      <th scope="col">Stop monitoring</th>
+      <th scope="col">Number of captures</th>
     </tr>
     </thead>
     <tbody>
-    {% for uuid, monitored_url, details, next_capture in monitored_index %}
+    {% for uuid, details in monitored_index %}
     <tr>
       <th scope="row">
-        {% if details['status'][0] %}
+        {% if details['number_captures'] >= 2 %}
           <a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a>
         {% else %}
           {{uuid}}
         {%endif%}
       </th>
-      <td>{{monitored_url}}</td>
-      <td>{{details['status'][1]}}</td>
-      <td>{{next_capture}}</td>
+      <td>{{details['capture_settings']['url']}}</td>
       <td>
-        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=uuid)}}" onsubmit="location.reload();" target="ignore">
-          <button type="submit" class="btn btn-primary">Stop</button>
-        </form>
+        {% if 'last_capture' in details %}
+          {{details['last_capture'].isoformat()}}
+        {% else%}
+          Never captured.
+        {% endif %}
       </td>
+      <td>
+        {% if 'next_capture' in details %}
+          {{details['next_capture'].isoformat()}}
+        {% else%}
+          No captures scheduled.
+        {% endif %}
+      </td>
+      <td>{{details['number_captures']}}</td>
     </tr>
     {% endfor %}
     </tbody>

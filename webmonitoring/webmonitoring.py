@@ -81,18 +81,28 @@ class Monitoring():
     def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
         return self._get_index('monitored', collection)
 
-    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
+    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Any]]]:
         to_return = []
         for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
                 continue
-            details = {'status': (True, '')}
-            if self.redis.zcard(f'{m}:captures') < 2:
-                details['status'] = (False, 'Cannot compare, not enough captures.')
-            if expire := self.redis.get(f'{m}:expire'):
-                if float(expire) <= datetime.now().timestamp():
-                    details['status'] = (True, 'Not monitored anymore.')
+            details = self.get_monitored_details(m)
             to_return.append((m, details))
+        return to_return
+
+    def get_monitored_details(self, monitor_uuid: str) -> Dict[str, Any]:
+        to_return = {}
+        to_return['capture_settings'] = self.get_monitored_settings(monitor_uuid)
+        try:
+            to_return['next_capture'] = self.get_next_capture(monitor_uuid)
+        except TimeError:
+            # No next capture set, expired
+            pass
+        if captures_ts := self.redis.zrevrangebyscore(f'{monitor_uuid}:captures', '+Inf', 0, withscores=True):
+            to_return['last_capture'] = datetime.fromtimestamp(captures_ts[0][1])
+            to_return['number_captures'] = len(captures_ts)
+        else:
+            to_return['number_captures'] = 0
         return to_return
 
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:

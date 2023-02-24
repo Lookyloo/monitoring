@@ -31,6 +31,9 @@ monitoring: Monitoring = Monitoring()
 
 @app.route('/', methods=['GET'])
 def index():
+    if request.method == 'HEAD':
+        # Just returns ack if the webserver is running
+        return 'Ack'
     return render_template('index.html')
 
 
@@ -41,24 +44,13 @@ def collections():
 
 
 def _index(index_type: str, collection: Optional[str]):
-    if request.method == 'HEAD':
-        # Just returns ack if the webserver is running
-        return 'Ack'
-    index: List[Tuple[str, str, Dict[str, Any], str]] = []
     if index_type == 'monitored':
         to_index = monitoring.get_monitored(collection=collection)
     elif index_type == 'expired':
         to_index = monitoring.get_expired(collection=collection)
     else:
         raise Exception(f'Can only be monitored or expired, not {index_type}')
-    for uuid, details in to_index:
-        settings = monitoring.get_monitored_settings(uuid)
-        try:
-            next_capture = monitoring.get_next_capture(uuid).isoformat()
-        except TimeError:
-            next_capture = 'No capture scheduled'
-        index.append((uuid, settings['url'], details, next_capture))
-    return render_template('monitored.html', monitored_index=index)
+    return render_template(f'{index_type}.html', monitored_index=to_index)
 
 
 @app.route('/monitored', methods=['GET'])
@@ -75,8 +67,13 @@ def expired(collection: Optional[str]=None):
 
 @app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])
 def changes_tracking(monitor_uuid: str):
-    changes = monitoring.compare_captures(monitor_uuid)
+    details = monitoring.get_monitored_details(monitor_uuid)
+    if details['number_captures'] < 2:
+        changes = {}
+    else:
+        changes = monitoring.compare_captures(monitor_uuid)
     return render_template('changes_tracking.html',
+                           details=details,
                            changes=changes,
                            changes_txt=json.dumps(changes, indent=2))
 

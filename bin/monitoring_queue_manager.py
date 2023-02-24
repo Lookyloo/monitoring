@@ -23,7 +23,7 @@ class QueueManager(AbstractManager):
 
 def main():
     qm = QueueManager()
-    qm.run(sleep_in_sec=60)
+    qm.run(sleep_in_sec=10)
 
 
 if __name__ == '__main__':

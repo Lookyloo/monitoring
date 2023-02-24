@@ -38,17 +38,17 @@ jobs:
         popd
         popd
 
-    # - name: Run API tests
-    # run: |
-    #    poetry run start
+    - name: Run API tests
+      run: |
+        poetry run start
 
-    #    git clone https://github.com/Lookyloo/pyproject_template.git
-    #    pushd pyproject_template
-    #    poetry install
-    #    poetry run pytest tests/test_web.py
-    #     popd
+        git clone https://github.com/Lookyloo/PyLookylooMonitoring.git
+        pushd PyLookylooMonitoring
+        poetry install
+        poetry run pytest tests/test_web.py
+        popd
 
-    #    poetry run stop
+        poetry run stop
 
     - name: Test update script
       run: |
