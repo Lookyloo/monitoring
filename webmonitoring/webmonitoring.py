@@ -113,7 +113,7 @@ class Monitoring():
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
 
-    def _next_run_from_cron(self, cron_string: str) -> datetime:
+    def _next_run_from_cron(self, cron_string: str, /) -> datetime:
         try:
             cron = Cron(cron_string)
             reference = datetime.now()
@@ -181,7 +181,6 @@ class Monitoring():
                 continue
 
             freq = self.redis.get(f'{monitor_uuid}:frequency')
-            # WIP, few hardcoded values - later, use the cron format too
             next_run = {monitor_uuid: 0.0}
             if not self.redis.exists(f'{monitor_uuid}:captures'):
                 # if the capture was triggered recently enough on lookyloo, it will just pick the capture UUID
