@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Compare captures{% endblock %}
+
+{% block content %}
+<div class="container">
+  <table class="table">
+    <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">URL</th>
+      <th scope="col">Last capture</th>
+      <th scope="col">Next capture</th>
+      <th scope="col">Number of captures</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for uuid, details in monitored_index %}
+    <tr>
+      <th scope="row">
+        {% if details['number_captures'] >= 2 %}
+          <a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a>
+        {% else %}
+          {{uuid}}
+        {%endif%}
+      </th>
+      <td>{{details['capture_settings']['url']}}</td>
+      <td>
+        {% if 'last_capture' in details %}
+          {{details['last_capture'].isoformat()}}
+        {% else%}
+          Never captured.
+        {% endif %}
+      </td>
+      <td>
+        {% if 'next_capture' in details %}
+          {{details['next_capture'].isoformat()}}
+        {% else%}
+          No captures scheduled.
+        {% endif %}
+      </td>
+      <td>{{details['number_captures']}}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<iframe name="ignore" src="about:blank" style="display:none;"></iframe>
+{% endblock %}
