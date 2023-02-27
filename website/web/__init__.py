@@ -3,13 +3,12 @@
 import json
 
 from importlib.metadata import version
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, Optional
 
 from flask import Flask, request, render_template
 from flask_bootstrap import Bootstrap5  # type: ignore
 from flask_restx import Api, Resource, fields  # type: ignore
 
-from webmonitoring.exceptions import TimeError
 from webmonitoring.webmonitoring import Monitoring
 
 from .helpers import get_secret_key
@@ -163,3 +162,11 @@ class JsonExpired(Resource):
 
     def get(self, collection: Optional[str]=None):
         return monitoring.get_expired(collection)
+
+
+@api.route('/json/settings')
+@api.doc(description='Get generic settings for the monitoring instance')
+class JsonSettings(Resource):
+
+    def get(self):
+        return monitoring.settings()

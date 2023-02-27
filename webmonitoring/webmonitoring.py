@@ -77,6 +77,12 @@ class Monitoring():
     def check_redis_up(self):
         return self.redis.ping()
 
+    def settings(self) -> Dict[str, Union[str, int, bool]]:
+        return {'min_frequency': get_config('generic', 'min_frequency'),
+                'max_captures': get_config('generic', 'max_captures'),
+                'force_expire': get_config('generic', 'force_expire')
+                }
+
     def get_collections(self):
         return self.redis.smembers('collections')
 
