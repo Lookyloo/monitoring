@@ -42,6 +42,12 @@ class MonitorSettings(TypedDict, total=False):
     collection: Optional[str]
 
 
+class MonitoringInstanceSettings(TypedDict):
+    min_frequency: int
+    max_captures: int
+    force_expire: bool
+
+
 class Monitoring():
 
     def __init__(self) -> None:
@@ -77,7 +83,7 @@ class Monitoring():
     def check_redis_up(self):
         return self.redis.ping()
 
-    def settings(self) -> Dict[str, Union[str, int, bool]]:
+    def settings(self) -> MonitoringInstanceSettings:
         return {'min_frequency': get_config('generic', 'min_frequency'),
                 'max_captures': get_config('generic', 'max_captures'),
                 'force_expire': get_config('generic', 'force_expire')

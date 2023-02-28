@@ -9,6 +9,7 @@ from flask import Flask, request, render_template
 from flask_bootstrap import Bootstrap5  # type: ignore
 from flask_restx import Api, Resource, fields  # type: ignore
 
+from webmonitoring.exceptions import CannotCompare
 from webmonitoring.webmonitoring import Monitoring
 
 from .helpers import get_secret_key
@@ -131,7 +132,10 @@ class StopMonitor(Resource):
 class JsonCompare(Resource):
 
     def get(self, monitor_uuid: str):
-        return monitoring.compare_captures(monitor_uuid)
+        try:
+            return monitoring.compare_captures(monitor_uuid)
+        except CannotCompare as e:
+            return {'error': str(e)}
 
 
 @api.route('/json/collections')
