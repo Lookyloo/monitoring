@@ -28,7 +28,7 @@ jupyterlab = "^3.6.1"
 pandas = "^1.5.3"
 cron-converter = "^1.0.1"
 bootstrap-flask = "^2.2.0"
-pylookyloo = {git = "https://github.com/Lookyloo/PyLookyloo.git"}
+pylookyloo = "^1.18.0"
 
 [tool.poetry.dev-dependencies]
 mypy = "^1.0.1"
