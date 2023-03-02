@@ -28,7 +28,7 @@ Initialize the `.env` file:
 echo WEBMONITORING_HOME="`pwd`" >> .env
 ```
 
-**Note**: `WEBMONITORING_HOME` is the name you have in `lacus/default/__init__.py`
+**Note**: `WEBMONITORING_HOME` is the name you have in `webmonitoring/default/__init__.py`
 
 ## Configuration
 
