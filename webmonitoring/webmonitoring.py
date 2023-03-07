@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 
 from uuid import uuid4
 
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict
+from logging import LoggerAdapter
+from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping
 
 from cron_converter import Cron  # type: ignore
 from pylookyloo import Lookyloo
@@ -34,6 +36,8 @@ class CaptureSettings(TypedDict, total=False):
     viewport: Optional[Dict[str, int]]
     referer: Optional[str]
 
+    listing: Optional[bool]
+
 
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
@@ -48,11 +52,38 @@ class MonitoringInstanceSettings(TypedDict):
     force_expire: bool
 
 
+def for_redis(data: CaptureSettings) -> Dict[str, Union[int, str, float]]:
+    mapping_capture: Dict[str, Union[float, int, str]] = {}
+    for key, value in data.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            mapping_capture[key] = 1 if value else 0
+        elif isinstance(value, (list, dict)):
+            if value:
+                mapping_capture[key] = json.dumps(value)
+        elif isinstance(value, (int, float, str)):
+            mapping_capture[key] = value
+        else:
+            raise Exception(f'Invalid type: {key} - {value}')
+    return mapping_capture
+
+
+class MonitoringLogAdapter(LoggerAdapter):
+    """
+    Prepend log entry with the UUID of the monitoring
+    """
+    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> Tuple[str, MutableMapping[str, Any]]:
+        if self.extra:
+            return '[%s] %s' % (self.extra['uuid'], msg), kwargs
+        return msg, kwargs
+
+
 class Monitoring():
 
     def __init__(self) -> None:
-        self.logger = logging.getLogger(f'{self.__class__.__name__}')
-        self.logger.setLevel(get_config('generic', 'loglevel'))
+        self.master_logger = logging.getLogger(f'{self.__class__.__name__}')
+        self.master_logger.setLevel(get_config('generic', 'loglevel'))
 
         self.redis_pool: ConnectionPool = ConnectionPool(connection_class=UnixDomainSocketConnection,
                                                          path=get_socket_path('cache'), decode_responses=True)
@@ -137,14 +168,20 @@ class Monitoring():
     def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None) -> str:
+
         monitor_uuid = str(uuid4())
+        logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         p = self.redis.pipeline()
-        p.hset(f'{monitor_uuid}:capture_settings', mapping=capture_settings)
+        p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
         p.set(f'{monitor_uuid}:frequency', frequency)
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
             p.sadd('collections', collection)
             p.sadd(f'collections:{collection}', monitor_uuid)
+            logger.info(f'Capture added to monitoring in collection "{collection}"')
+        else:
+            logger.info('Capture added to monitoring')
+
         if expire_at:
             if isinstance(expire_at, (str, int, float)):
                 _expire = float(expire_at)
@@ -178,18 +215,22 @@ class Monitoring():
 
     def update_monitoring_queue(self):
         for monitor_uuid in self.redis.smembers('monitored'):
-            if self.redis.zscore('monitoring_queue', monitor_uuid):
+            logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
+            if existing_next_run := self.redis.zscore('monitoring_queue', monitor_uuid):
                 # don't do anything, let the next capture happen
                 # FIXME: Probaby change that if the interval is shorter than the next capture (=> changed)
+                logger.debug(f'Already scheduled for {datetime.fromtimestamp(existing_next_run)}')
                 continue
             _expire = self.redis.get(f'{monitor_uuid}:expire')
             if _expire and datetime.now().timestamp() > float(_expire):
                 # Monitoring expired
                 self.redis.smove('monitored', 'expired', monitor_uuid)
+                logger.info('Expiration timestamp reached.')
                 continue
             elif self.force_expire and self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures:
                 # Force expire monitoring
                 self.redis.smove('monitored', 'expired', monitor_uuid)
+                logger.info('Maximum amount of captures reached, expire..')
                 continue
 
             freq = self.redis.get(f'{monitor_uuid}:frequency')
@@ -206,13 +247,14 @@ class Monitoring():
                     try:
                         next_run[monitor_uuid] = self._next_run_from_cron(freq).timestamp()
                     except TimeError as e:
-                        self.logger.warning(f'Invalid cron string: {e}')
+                        logger.warning(f'Invalid cron string: {e}')
                         next_run[monitor_uuid] = (datetime.now() + timedelta(seconds=self.min_frequency + 60)).timestamp()
                 # Make sure the next capture is not scheduled for in a too short interval
                 interval_next_capture = next_run[monitor_uuid] - datetime.now().timestamp()
                 if interval_next_capture < self.min_frequency:
-                    self.logger.warning(f'The next capture is scheduled too soon: {interval_next_capture}s. Minimal interval: {self.min_frequency}s.')
+                    logger.warning(f'The next capture is scheduled too soon: {interval_next_capture}s. Minimal interval: {self.min_frequency}s.')
                     next_run[monitor_uuid] = (datetime.now() + timedelta(seconds=self.min_frequency)).timestamp()
+            logger.info(f'Scheduled for {datetime.fromtimestamp(next_run[monitor_uuid])}')
             self.redis.zadd('monitoring_queue', mapping=next_run)
 
     def get_next_capture(self, monitor_uuid: str) -> datetime:
@@ -224,7 +266,10 @@ class Monitoring():
     def process_monitoring_queue(self):
         now = datetime.now().timestamp()
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
-            settings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
+            logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
+            settings: CaptureSettings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
+            settings['listing'] = False
+            logger.info('Trigering capture')
             new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
             if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
                 self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
