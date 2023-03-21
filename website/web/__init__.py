@@ -93,7 +93,7 @@ class RedisUp(Resource):
 
 
 capture_settings_mapping = api.model('CaptureSettings', {
-    'url': fields.Url(description="The URL to capture")
+    'url': fields.String(description="The URL to capture")
 })
 
 
@@ -146,6 +146,15 @@ class JsonCollections(Resource):
         return list(monitoring.get_collections())
 
 
+monitor_field_response = api.model('MonitorFieldResponse', {
+    'uuid': fields.String(),
+    'capture_settings': fields.Nested(capture_settings_mapping),
+    'next_capture': fields.DateTime(),
+    'last_capture': fields.DateTime(),
+    'number_captures': fields.Integer(),
+})
+
+
 @api.route('/json/monitored',
            doc={'description': 'Get the list of monitored UUIDs'})
 @api.route('/json/monitored/<string:collection>',
@@ -153,6 +162,7 @@ class JsonCollections(Resource):
                 'collection': 'Limit the response to a specific collection'})
 class JsonMonitored(Resource):
 
+    @api.marshal_with(monitor_field_response, skip_none=True)
     def get(self, collection: Optional[str]=None):
         return monitoring.get_monitored(collection)
 
@@ -164,6 +174,7 @@ class JsonMonitored(Resource):
                 'collection': 'Limit the response to a specific collection'})
 class JsonExpired(Resource):
 
+    @api.marshal_with(monitor_field_response, skip_none=True)
     def get(self, collection: Optional[str]=None):
         return monitoring.get_expired(collection)
 

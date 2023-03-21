@@ -15,13 +15,13 @@
     </tr>
     </thead>
     <tbody>
-    {% for uuid, details in monitored_index %}
+    {% for details in monitored_index %}
     <tr>
       <th scope="row">
         {% if details['number_captures'] >= 2 %}
-          <a href="{{ url_for('changes_tracking', monitor_uuid=uuid)}}">{{uuid}}</a>
+          <a href="{{ url_for('changes_tracking', monitor_uuid=details['uuid'])}}">{{details['uuid']}}</a>
         {% else %}
-          {{uuid}}
+          {{details['uuid']}}
         {%endif%}
       </th>
       <td>{{details['capture_settings']['url']}}</td>

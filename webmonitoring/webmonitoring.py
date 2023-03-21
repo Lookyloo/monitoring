@@ -123,23 +123,23 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
-    def get_expired(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
+    def get_expired(self, collection: Optional[str]=None) -> List[Dict[str, Tuple[bool, str]]]:
         return self._get_index('expired', collection)
 
-    def get_monitored(self, collection: Optional[str]=None) -> List[Tuple[str, Dict[str, Tuple[bool, str]]]]:
+    def get_monitored(self, collection: Optional[str]=None) -> List[Dict[str, Tuple[bool, str]]]:
         return self._get_index('monitored', collection)
 
-    def _get_index(self, key: str, collection: Optional[str]) -> List[Tuple[str, Dict[str, Any]]]:
+    def _get_index(self, key: str, collection: Optional[str]) -> List[Dict[str, Any]]:
         to_return = []
         for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
                 continue
             details = self.get_monitored_details(m)
-            to_return.append((m, details))
+            to_return.append(details)
         return to_return
 
     def get_monitored_details(self, monitor_uuid: str) -> Dict[str, Any]:
-        to_return: Dict[str, Any] = {}
+        to_return: Dict[str, Any] = {'uuid': monitor_uuid}
         to_return['capture_settings'] = self.get_monitored_settings(monitor_uuid)
         try:
             to_return['next_capture'] = self.get_next_capture(monitor_uuid)
