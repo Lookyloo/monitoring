@@ -18,13 +18,13 @@ run_captures = "bin.run_captures:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-redis = {version = "^4.5.1", extras = ["hiredis"]}
+redis = {version = "^4.5.1,!=4.5.2", extras = ["hiredis"]}
 flask-restx = "^1.1.0"
 werkzeug = "^2.2.3"
 gunicorn = "^20.1.0"
 plotly = "^5.13.1"
 jupyter-dash = "^0.4.2"
-jupyterlab = "^3.6.1"
+jupyterlab = "^3.6.2"
 pandas = "^1.5.3"
 cron-converter = "^1.0.1"
 bootstrap-flask = "^2.2.0"
