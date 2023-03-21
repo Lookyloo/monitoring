@@ -4,7 +4,7 @@
 import logging
 import argparse
 
-from webmonitoring.capture_project import CaptureProject
+from .capture_project import CaptureProject
 
 logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s:%(message)s',
                     level=logging.INFO, datefmt='%I:%M:%S')
