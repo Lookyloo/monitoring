@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from datetime import datetime, timedelta
 from logging import LoggerAdapter
-from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping
+from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
 from cron_converter import Cron  # type: ignore
 from pylookyloo import Lookyloo
@@ -15,7 +15,7 @@ from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
 from .default import get_config, get_socket_path
-from .exceptions import TimeError, CannotCompare
+from .exceptions import TimeError, CannotCompare, InvalidSettings
 from .helpers import get_useragent_for_requests
 
 
@@ -39,11 +39,19 @@ class CaptureSettings(TypedDict, total=False):
     listing: Optional[bool]
 
 
+class CompareSettings(TypedDict, total=False):
+    '''The settings that can be passed to the compare method on lookyloo side to filter out some differences'''
+
+    ressources_ignore_domains: Optional[List[str]]
+    ressources_ignore_regexes: Optional[List[str]]
+
+
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
     expire_at: Optional[str]
     collection: Optional[str]
+    compare_settings: Optional[CompareSettings]
 
 
 class MonitoringInstanceSettings(TypedDict):
@@ -52,7 +60,7 @@ class MonitoringInstanceSettings(TypedDict):
     force_expire: bool
 
 
-def for_redis(data: CaptureSettings) -> Dict[str, Union[int, str, float]]:
+def for_redis(data: Mapping) -> Dict[str, Union[int, str, float]]:
     mapping_capture: Dict[str, Union[float, int, str]] = {}
     for key, value in data.items():
         if value is None:
@@ -165,12 +173,39 @@ class Monitoring():
         except ValueError as e:
             raise TimeError(f'Invalid cron format: {cron_string} - {e}')
 
+    @overload
+    def monitor(self, /, *, monitor_settings: MonitorSettings) -> str:
+        ...
+
+    @overload
     def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None) -> str:
+                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None) -> str:
+        ...
+
+    def monitor(self, capture_settings: Optional[CaptureSettings]=None,
+                /, frequency: Optional[str]=None, *,
+                expire_at: Optional[Union[datetime, str, int, float]]=None,
+                collection: Optional[str]=None,
+                compare_settings: Optional[CompareSettings]=None,
+                monitor_settings: Optional[MonitorSettings]=None) -> str:
 
         monitor_uuid = str(uuid4())
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
+        if monitor_settings:
+            capture_settings = monitor_settings.get('capture_settings')
+            frequency = monitor_settings.get('frequency')
+            expire_at = monitor_settings.get('expire_at')
+            collection = monitor_settings.get('collection')
+            compare_settings = monitor_settings.get('compare_settings')
+
+        if not capture_settings:
+            logger.critical('No capture settings')
+            raise InvalidSettings('The capture settings are missing.')
+        if not frequency:
+            logger.critical('No frequency')
+            raise InvalidSettings('The frequency missing.')
+
         p = self.redis.pipeline()
         p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
         p.set(f'{monitor_uuid}:frequency', frequency)
@@ -191,6 +226,10 @@ class Monitoring():
                 # The expiration time is in the past.
                 raise TimeError('Expiration time in the past.')
             p.set(f'{monitor_uuid}:expire', _expire)
+
+        if compare_settings:
+            p.hset(f'{monitor_uuid}:compare_settings', mapping=for_redis(compare_settings))
+
         p.sadd('monitored', monitor_uuid)
         p.execute()
         return monitor_uuid
@@ -210,7 +249,16 @@ class Monitoring():
         if len(capture_uuids) < 2:
             raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
-        compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
+        if _compare_settings := self.redis.hgetall(f'{monitor_uuid}:compare_settings'):
+            compare_settings: CompareSettings = {}
+            if ressources_ignore_domains := _compare_settings.get('ressources_ignore_domains'):
+                compare_settings['ressources_ignore_domains'] = json.loads(ressources_ignore_domains)
+            if ressources_ignore_regexes := _compare_settings.get('ressources_ignore_regexes'):
+                compare_settings['ressources_ignore_regexes'] = json.loads(ressources_ignore_regexes)
+            compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0],
+                                                            compare_settings=compare_settings)
+        else:
+            compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
         return compare_result
 
     def update_monitoring_queue(self):

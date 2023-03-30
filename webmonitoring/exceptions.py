@@ -9,3 +9,7 @@ class TimeError(WebMonitoringException):
 
 class CannotCompare(WebMonitoringException):
     pass
+
+
+class InvalidSettings(WebMonitoringException):
+    pass

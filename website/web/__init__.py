@@ -96,12 +96,17 @@ capture_settings_mapping = api.model('CaptureSettings', {
     'url': fields.String(description="The URL to capture")
 })
 
+compare_settings_mapping = api.model('CompareSettings', {
+    'ressources_ignore_domains': fields.List(fields.String(description="A domain to ignore")),
+    'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL"))
+})
 
 monitor_fields_post = api.model('MonitorFieldsPost', {
     'capture_settings': fields.Nested(capture_settings_mapping, description="The capture settings"),
     'frequency': fields.String('The frequency of the capture'),
     'expire_at': fields.String('When the monitoring expires, empty means never'),
-    'collection': fields.String('The name of the collection')
+    'collection': fields.String('The name of the collection'),
+    'compare_settings': fields.Nested(compare_settings_mapping, description="The settings to compare captures.")
 })
 
 
@@ -113,7 +118,8 @@ class Monitor(Resource):
     def post(self):
         monit: Dict[str, Any] = request.get_json(force=True)
         monitor_uuid = monitoring.monitor(monit['capture_settings'], frequency=monit['frequency'],
-                                          expire_at=monit.get('expire_at'), collection=monit.get('collection'))
+                                          expire_at=monit.get('expire_at'), collection=monit.get('collection'),
+                                          compare_settings=monit.get('compare_settings'))
         return monitor_uuid
 
 
