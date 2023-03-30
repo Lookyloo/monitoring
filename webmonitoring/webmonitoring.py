@@ -131,10 +131,10 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
-    def get_expired(self, collection: Optional[str]=None) -> List[Dict[str, Tuple[bool, str]]]:
+    def get_expired(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
         return self._get_index('expired', collection)
 
-    def get_monitored(self, collection: Optional[str]=None) -> List[Dict[str, Tuple[bool, str]]]:
+    def get_monitored(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
         return self._get_index('monitored', collection)
 
     def _get_index(self, key: str, collection: Optional[str]) -> List[Dict[str, Any]]:
