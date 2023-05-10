@@ -7,6 +7,18 @@
     "min_frequency": 3000,
     "max_captures": 10,
     "force_expire": true,
+    "email": {
+        "smtp_host": "localhost",
+        "smtp_port": "25",
+        "from": "Lookyloo Monitoring <lookyloo_monitoring@monitoring.local>",
+        "domain": "monitoring.myorg.local"
+    },
+    "email_smtp_auth": {
+        "auth": false,
+        "smtp_user":"lookyloo_monitoring@monitoring.local",
+        "smtp_pass":"password",
+        "smtp_use_tls": false
+    },
     "_notes": {
         "loglevel": "Can be one of the value listed here: https://docs.python.org/3/library/logging.html#levels",
         "website_listen_ip": "IP Flask will listen on. Defaults to 0.0.0.0, meaning all interfaces.",
@@ -15,6 +27,8 @@
         "lookyloo_url": "The URL of the Lookyloo instance to use for the captures.",
         "min_frequency": "Do not schedule captures more often than this value (mist be an int, in seconds)",
         "max_captures": "Automatically expire the monitoring when this amount of captures has been triggered.",
-        "force_expire": "If true, the expiring time will be set to a maximum of the frequency (provded by the user, or min_frequency if higher) * the max amount of captures."
+        "force_expire": "If true, the expiring time will be set to a maximum of the frequency (provded by the user, or min_frequency if higher) * the max amount of captures.",
+        "email": "Email configuration to send notifications",
+        "email_smtp_auth": "Email SMTP auth configuration to send notifications"
     }
 }

@@ -6,6 +6,7 @@ import logging
 from uuid import uuid4
 
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 from logging import LoggerAdapter
 from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
@@ -16,7 +17,8 @@ from redis.connection import UnixDomainSocketConnection
 
 from .default import get_config, get_socket_path
 from .exceptions import TimeError, CannotCompare, InvalidSettings
-from .helpers import get_useragent_for_requests
+from .helpers import get_useragent_for_requests, get_email_template
+from .mail import Mail
 
 
 class CaptureSettings(TypedDict, total=False):
@@ -46,12 +48,19 @@ class CompareSettings(TypedDict, total=False):
     ressources_ignore_regexes: Optional[List[str]]
 
 
+class NotificationSettings(TypedDict, total=False):
+    '''The notification settings for a monitoring'''
+
+    email: str
+
+
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
     expire_at: Optional[str]
     collection: Optional[str]
     compare_settings: Optional[CompareSettings]
+    notification: Optional[NotificationSettings]
 
 
 class MonitoringInstanceSettings(TypedDict):
@@ -180,7 +189,8 @@ class Monitoring():
     @overload
     def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None) -> str:
+                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
+                notification: Optional[NotificationSettings]=None) -> str:
         ...
 
     def monitor(self, capture_settings: Optional[CaptureSettings]=None,
@@ -188,6 +198,7 @@ class Monitoring():
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None,
                 compare_settings: Optional[CompareSettings]=None,
+                notification: Optional[NotificationSettings]=None,
                 monitor_settings: Optional[MonitorSettings]=None) -> str:
 
         monitor_uuid = str(uuid4())
@@ -198,6 +209,7 @@ class Monitoring():
             expire_at = monitor_settings.get('expire_at')
             collection = monitor_settings.get('collection')
             compare_settings = monitor_settings.get('compare_settings')
+            notification = monitor_settings.get('notification')
 
         if not capture_settings:
             logger.critical('No capture settings')
@@ -229,6 +241,8 @@ class Monitoring():
 
         if compare_settings:
             p.hset(f'{monitor_uuid}:compare_settings', mapping=for_redis(compare_settings))
+        if notification:
+            p.hset(f'{monitor_uuid}:notification', mapping=for_redis(notification))
 
         p.sadd('monitored', monitor_uuid)
         p.execute()
@@ -316,8 +330,77 @@ class Monitoring():
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
             settings: CaptureSettings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
-            settings['listing'] = False
+            settings['listing'] = False  # force the monitored capture our of the lookyloo index page
             logger.info('Trigering capture')
             new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
             if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
                 self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
+                # Check if the monitoring settings have notification settings
+                if self.redis.exists(f'{monitor_uuid}:notification'):
+                    # Flag it for the notification mechanism
+                    self.redis.hset('to_notify', mapping={monitor_uuid: new_capture_uuid})
+
+    def process_notifications(self):
+        # Iterate over monitoring that requires a notification
+        for monitor_uuid, capture_uuid in self.redis.hgetall('to_notify').items():
+            logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
+            capture_status = self.lookyloo.get_status(capture_uuid)
+            if 'status_code' not in capture_status:
+                logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
+                continue
+            # check if capture is done
+            if capture_status['status_code'] in [0, 2]:
+                logger.info(f'Capture ongoing ({capture_uuid}), retry later.')
+            elif capture_status['status_code'] == -1:
+                logger.warning(f'Unable to find capture {capture_uuid} in lookyloo, discarding.')
+                self.redis.hdel('to_notify', monitor_uuid)
+            elif capture_status['status_code'] == 1:
+                logger.debug(f'Capture {capture_uuid} done, trigering notification.')
+                self.redis.hdel('to_notify', monitor_uuid)
+                self.notify(monitor_uuid)
+            else:
+                logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
+
+    def prepare_notification_mail(self, mail_to: str, monitor_uuid: str) -> EmailMessage:
+        capture_settings = self.get_monitored_settings(monitor_uuid)
+        captured_url = capture_settings['url']
+        results = self.compare_captures(monitor_uuid)
+        email_config = get_config('generic', 'email')
+        msg = EmailMessage()
+        msg['Subject'] = f"Monitoring notification for {captured_url} ({monitor_uuid})"
+        msg['From'] = email_config['from']
+        # if isinstance(mail_to, str):
+        msg['To'] = mail_to
+        # else:
+        #     msg['To'] = ', '.join(mail_to)
+        body = get_email_template()
+        body = body.format(recipient=msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0],
+                           sender=msg['From'].addresses[0].display_name,
+                           monitor_uuid=monitor_uuid,
+                           captured_url=captured_url,
+                           domain=email_config["domain"])
+        msg.set_content(body)
+        msg.add_attachment(json.dumps(results, indent=2), filename='comparison.json')
+
+        return msg
+
+    def notify(self, monitor_uuid: str):
+        logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
+        notification_settings: NotificationSettings
+        if notification_settings := self.redis.hgetall(f'{monitor_uuid}:notification'):
+            if 'email' not in notification_settings:
+                logger.warning('Email to notify missing in notification settings, skip.')
+                return
+
+            try:
+                mail = self.prepare_notification_mail(
+                    mail_to=notification_settings['email'],
+                    monitor_uuid=monitor_uuid)
+                if Mail.send(mail):
+                    logger.debug('Notification sent successfully')
+                else:
+                    logger.debug('Unable to send notification')
+            except CannotCompare as e:
+                logger.warning(f'Unable to run a comparison: {e}')
+        else:
+            logger.warning('No notification settings, ignore.')

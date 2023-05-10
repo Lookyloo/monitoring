@@ -13,6 +13,7 @@ shutdown = "bin.shutdown:main"
 run_backend = "bin.run_backend:main"
 start_website = "bin.start_website:main"
 monitoring_queue_manager = "bin.monitoring_queue_manager:main"
+notification_manager = "bin.notification_manager:main"
 
 run_captures = "bin.run_captures:main"
 
@@ -28,7 +29,8 @@ pylookyloo = "^1.19.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.2.0"
-types-redis = {version = "^4.5.4.2"}
+types-redis = {version = "^4.5.5.0"}
+types-requests = "^2.30.0.0"
 
 [tool.poetry.group.old]
 optional = true
