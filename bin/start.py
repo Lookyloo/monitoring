@@ -12,9 +12,15 @@ def main():
     p = run(['run_backend', '--start'])
     p.check_returncode()
     print('done.')
+
     print('Start queue manager...')
     Popen(['monitoring_queue_manager'])
     print('done.')
+
+    print('Start notification manager...')
+    Popen(['notification_manager'])
+    print('done.')
+
     print('Start website...')
     Popen(['start_website'])
     print('done.')
