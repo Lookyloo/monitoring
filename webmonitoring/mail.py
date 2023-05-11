@@ -25,7 +25,7 @@ class Mail:
                     server.starttls()
             server.send_message(email)
             server.quit()
-        except smtplib.SMTPException as e:
+        except (ConnectionRefusedError, smtplib.SMTPException) as e:
             logger.critical(f'Unable to send mail: {e}\n{email}')
             return False
         return True

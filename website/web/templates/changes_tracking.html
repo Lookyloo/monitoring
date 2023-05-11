@@ -30,6 +30,11 @@
   <pre>
     {{changes['details']}}
   </pre>
+  {% elif 'different' in changes and changes['different'] is false %}
+   Both captures are the same.
+   <pre>
+   {{changes_txt}}
+   </pre>
   {% else %}
    Comparison of the two most recent captures:
    <ul>

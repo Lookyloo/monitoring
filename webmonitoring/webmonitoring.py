@@ -361,10 +361,9 @@ class Monitoring():
             else:
                 logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
 
-    def prepare_notification_mail(self, mail_to: str, monitor_uuid: str) -> EmailMessage:
+    def prepare_notification_mail(self, mail_to: str, monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
         capture_settings = self.get_monitored_settings(monitor_uuid)
         captured_url = capture_settings['url']
-        results = self.compare_captures(monitor_uuid)
         email_config = get_config('generic', 'email')
         msg = EmailMessage()
         msg['Subject'] = f"Monitoring notification for {captured_url} ({monitor_uuid})"
@@ -373,15 +372,44 @@ class Monitoring():
         msg['To'] = mail_to
         # else:
         #     msg['To'] = ', '.join(mail_to)
+        details = ''
+        # For not, only add differences in the mail
+        for compare_key, compare_details in comparison_results.items():
+            if compare_key in ['root_url', 'final_url', 'final_hostname', 'final_status_code']:
+                if isinstance(compare_details['details'], (str, int)):
+                    # no difference
+                    continue
+                details += f'  * {compare_details["message"]} - Before: {compare_details["details"][0]} / After {compare_details["details"][1]}\n'
+            elif compare_key == 'redirects':
+                details += '  * Redirects:\n'
+                if not isinstance(compare_details['length']['details'], int):
+                    details += f'  * {compare_details["length"]["message"]} - Before: {compare_details["length"]["details"][0]} / After {compare_details["length"]["details"][1]}\n'
+                for node_info in compare_details['nodes']:
+                    for node_key, node_details in node_info.items():
+                        if isinstance(node_details['details'], (str, int)):
+                            # no difference
+                            continue
+                        details += f'    * {node_details["message"]} - Before: {node_details["details"][0]} / After {node_details["details"][1]}\n'
+
+            elif compare_key == 'ressources':
+                if compare_details['left']:
+                    details += '  * Ressources only in old capture:\n'
+                    details += '\n    * '.join(compare_details['left'])
+                if compare_details['right']:
+                    details += '  * Ressources only in new capture:\n'
+                    details += '\n    * '.join(compare_details['right'])
+            else:
+                # unexpected key name
+                pass
         body = get_email_template()
         body = body.format(recipient=msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0],
                            sender=msg['From'].addresses[0].display_name,
                            monitor_uuid=monitor_uuid,
                            captured_url=captured_url,
-                           domain=email_config["domain"])
+                           domain=email_config["domain"],
+                           details_differences=details)
         msg.set_content(body)
-        msg.add_attachment(json.dumps(results, indent=2), filename='comparison.json')
-
+        msg.add_attachment(json.dumps(comparison_results, indent=2), filename='comparison.json')
         return msg
 
     def notify(self, monitor_uuid: str):
@@ -393,9 +421,15 @@ class Monitoring():
                 return
 
             try:
+                results = self.compare_captures(monitor_uuid)
+                if 'different' in results and results['different'] is False:
+                    # No difference, do not notify.
+                    logger.info('No differences between the last two captures, skip notification.')
+                    return
                 mail = self.prepare_notification_mail(
                     mail_to=notification_settings['email'],
-                    monitor_uuid=monitor_uuid)
+                    monitor_uuid=monitor_uuid,
+                    comparison_results=results)
                 if Mail.send(mail):
                     logger.debug('Notification sent successfully')
                 else:
