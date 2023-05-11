@@ -395,9 +395,11 @@ class Monitoring():
                 if compare_details['left']:
                     details += '  * Ressources only in old capture:\n'
                     details += '\n    * '.join(compare_details['left'])
+                    details += '\n'
                 if compare_details['right']:
                     details += '  * Ressources only in new capture:\n'
                     details += '\n    * '.join(compare_details['right'])
+                    details += '\n'
             else:
                 # unexpected key name
                 pass
