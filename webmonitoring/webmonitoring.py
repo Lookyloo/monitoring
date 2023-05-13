@@ -392,11 +392,11 @@ class Monitoring():
                         details += f'    * {node_details["message"]} - Before: {node_details["details"][0]} / After {node_details["details"][1]}\n'
 
             elif compare_key == 'ressources':
-                if compare_details['left']:
+                if compare_details.get('left'):
                     details += '  * Ressources only in old capture:\n'
                     details += '\n    * '.join(compare_details['left'])
                     details += '\n'
-                if compare_details['right']:
+                if compare_details.get('right'):
                     details += '  * Ressources only in new capture:\n'
                     details += '\n    * '.join(compare_details['right'])
                     details += '\n'
@@ -404,7 +404,11 @@ class Monitoring():
                 # unexpected key name
                 pass
         body = get_email_template()
-        body = body.format(recipient=msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0],
+        if msg['To'].addresses:
+            recipient = msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0]
+        else:
+            recipient = 'Not a valid address'
+        body = body.format(recipient=recipient,
                            sender=msg['From'].addresses[0].display_name,
                            monitor_uuid=monitor_uuid,
                            captured_url=captured_url,
