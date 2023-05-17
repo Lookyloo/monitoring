@@ -365,6 +365,7 @@ class Monitoring():
                 logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
 
     def prepare_notification_mail(self, mail_to: str, monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
+        logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         capture_settings = self.get_monitored_settings(monitor_uuid)
         captured_url = capture_settings['url']
         email_config = get_config('generic', 'email')
@@ -407,10 +408,11 @@ class Monitoring():
                 # unexpected key name
                 pass
         body = get_email_template()
-        if msg['To'].addresses:
+        try:
             recipient = msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0]
-        else:
+        except Exception as e:
             recipient = 'Not a valid address'
+            logger.critial(f'Unable to get a recipient email address: {mail_to} - {e}')
         body = body.format(recipient=recipient,
                            sender=msg['From'].addresses[0].display_name,
                            monitor_uuid=monitor_uuid,
