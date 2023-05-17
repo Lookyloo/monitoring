@@ -412,7 +412,7 @@ class Monitoring():
             recipient = msg['To'].addresses[0].display_name if msg['To'].addresses[0].display_name else msg['To'].addresses[0]
         except Exception as e:
             recipient = 'Not a valid address'
-            logger.critial(f'Unable to get a recipient email address: {mail_to} - {e}')
+            logger.critical(f'Unable to get a recipient email address: {mail_to} - {e}')
         body = body.format(recipient=recipient,
                            sender=msg['From'].addresses[0].display_name,
                            monitor_uuid=monitor_uuid,

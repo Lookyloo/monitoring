@@ -12,6 +12,7 @@
       <th scope="col">Last capture</th>
       <th scope="col">Next capture</th>
       <th scope="col">Number of captures</th>
+      <th scope="col">Stop monitoring</th>
     </tr>
     </thead>
     <tbody>
@@ -40,6 +41,11 @@
         {% endif %}
       </td>
       <td>{{details['number_captures']}}</td>
+      <td>
+        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}" onsubmit="location.reload();" target="ignore">
+          <button type="submit" class="btn btn-primary">Stop</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
     </tbody>
