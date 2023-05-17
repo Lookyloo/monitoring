@@ -223,7 +223,7 @@ class Monitoring():
 
         p = self.redis.pipeline()
         p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
-        p.set(f'{monitor_uuid}:frequency', frequency)
+        p.set(f'{monitor_uuid}:frequency', frequency.lower())
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
             p.sadd('collections', collection)
