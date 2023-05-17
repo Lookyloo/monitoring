@@ -173,6 +173,9 @@ class Monitoring():
     def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
 
+    def get_compare_settings(self, monitor_uuid: str) -> Dict[str, Any]:
+        return self.redis.hgetall(f'{monitor_uuid}:compare_settings')
+
     def _next_run_from_cron(self, cron_string: str, /) -> datetime:
         try:
             cron = Cron(cron_string)
@@ -263,7 +266,7 @@ class Monitoring():
         if len(capture_uuids) < 2:
             raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
-        if _compare_settings := self.redis.hgetall(f'{monitor_uuid}:compare_settings'):
+        if _compare_settings := self.get_compare_settings(monitor_uuid):
             compare_settings: CompareSettings = {}
             if ressources_ignore_domains := _compare_settings.get('ressources_ignore_domains'):
                 compare_settings['ressources_ignore_domains'] = json.loads(ressources_ignore_domains)

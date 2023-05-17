@@ -68,12 +68,14 @@ def expired(collection: Optional[str]=None):
 @app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])
 def changes_tracking(monitor_uuid: str):
     details = monitoring.get_monitored_details(monitor_uuid)
+    settings = monitoring.get_compare_settings(monitor_uuid)
     if details['number_captures'] < 2:
         changes = {}
     else:
         changes = monitoring.compare_captures(monitor_uuid)
     return render_template('changes_tracking.html',
                            details=details,
+                           settings=settings,
                            changes=changes,
                            changes_txt=json.dumps(changes, indent=2))
 

@@ -11,6 +11,11 @@
       {{details['capture_settings']}}
       </pre>
     </li>
+    <li>Comparison settings:
+      <pre>
+      {{settings}}
+      </pre>
+    </li>
     {% if 'next_capture' in details%}
     <li>Next capture: {{details['next_capture'].isoformat() }}</li>
     {%endif%}
@@ -23,6 +28,13 @@
     <li>Last one triggered at {{details['last_capture'].isoformat()}}</li>
     {%endif%}
   </ul>
+  {% if 'lookyloo_urls' in changes%}
+  <h4>Links to the captures on Lookyloo</h4>
+  <ul>
+      <li><a href="{{changes['lookyloo_urls']['left']}}">Old capture</a></li>
+      <li><a href="{{changes['lookyloo_urls']['right']}}">New capture</a></li>
+  </ul>
+  {%endif%}
   <hr>
   {% if 'error' in changes %}
   Unable to compare: {{changes['error']}}
