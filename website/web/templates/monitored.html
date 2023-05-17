@@ -2,6 +2,21 @@
 
 {% block title %}Compare captures{% endblock %}
 
+{% block scripts %}
+  {{ super() }}
+  <script>
+
+    function stop_method(event) {
+      const stop = document.getElementById("stop_button");
+      stop.disabled = true;
+      stop.textContent = "Monitoring stoped"
+    }
+
+    const stop = document.getElementById("stop_monitoring");
+    stop.addEventListener("submit", stop_method);
+  </script>
+{% endblock %}
+
 {% block content %}
 <div class="container">
   <table class="table">
@@ -42,8 +57,8 @@
       </td>
       <td>{{details['number_captures']}}</td>
       <td>
-        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}" onsubmit="location.reload();" target="ignore">
-          <button type="submit" class="btn btn-primary">Stop</button>
+        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}" id="stop_monitoring" target="ignore">
+          <button type="submit" class="btn btn-primary" id="stop_button">Stop</button>
         </form>
       </td>
     </tr>
