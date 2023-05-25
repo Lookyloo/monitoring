@@ -11,7 +11,7 @@ from logging import LoggerAdapter
 from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
 from cron_converter import Cron  # type: ignore
-from pylookyloo import Lookyloo
+from pylookyloo import Lookyloo, CaptureSettings
 from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
@@ -19,26 +19,6 @@ from .default import get_config, get_socket_path
 from .exceptions import TimeError, CannotCompare, InvalidSettings
 from .helpers import get_useragent_for_requests, get_email_template
 from .mail import Mail
-
-
-class CaptureSettings(TypedDict, total=False):
-    '''The capture settings that can be passed to Lookyloo.'''
-
-    url: Optional[str]
-    document_name: Optional[str]
-    document: Optional[str]
-    browser: Optional[str]
-    device_name: Optional[str]
-    user_agent: Optional[str]
-    proxy: Optional[Union[str, Dict[str, str]]]
-    general_timeout_in_sec: Optional[int]
-    cookies: Optional[List[Dict[str, Any]]]
-    headers: Optional[Union[str, Dict[str, str]]]
-    http_credentials: Optional[Dict[str, int]]
-    viewport: Optional[Dict[str, int]]
-    referer: Optional[str]
-
-    listing: Optional[bool]
 
 
 class CompareSettings(TypedDict, total=False):

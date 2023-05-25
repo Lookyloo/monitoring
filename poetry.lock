@@ -2043,14 +2043,14 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pylookyloo"
-version = "1.19.2"
+version = "1.19.3"
 description = "Python CLI and module for Lookyloo"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "pylookyloo-1.19.2-py3-none-any.whl", hash = "sha256:9e7b7c83a3b7565e45b5e3939ccf9baa8e3356a25b4f6b5bba26cfad1b479644"},
-    {file = "pylookyloo-1.19.2.tar.gz", hash = "sha256:223156329d168fb42cccf92b1e1a7e8684d12ccbce686e0d9afbdbc97005c719"},
+    {file = "pylookyloo-1.19.3-py3-none-any.whl", hash = "sha256:35a349b70f263ef9f66b85f84ea5013859f010b4a9a63c7539cb5da541812028"},
+    {file = "pylookyloo-1.19.3.tar.gz", hash = "sha256:9d4fb6877ca97303afefeba0ab98a45c8be90309dbc7a7070d1968556661f519"},
 ]
 
 [package.dependencies]
@@ -2888,4 +2888,4 @@ test = ["mypy", "pre-commit", "pytest", "pytest-asyncio", "websockets (>=10.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "96b6eed01fc7d2f07a02d2026f809d52bbb65c995075224a28f052707f039400"
+content-hash = "faff751256ce62035c09a209308f1c2f17d4eaa7e98bf352cb29b12a82516a8b"
