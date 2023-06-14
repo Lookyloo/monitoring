@@ -17,7 +17,8 @@
         "auth": false,
         "smtp_user":"lookyloo_monitoring@monitoring.local",
         "smtp_pass":"password",
-        "smtp_use_tls": false
+        "smtp_use_starttls": true,
+        "verify_certificate": true
     },
     "_notes": {
         "loglevel": "Can be one of the value listed here: https://docs.python.org/3/library/logging.html#levels",
