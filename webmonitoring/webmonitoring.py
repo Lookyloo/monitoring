@@ -49,7 +49,9 @@ class MonitoringInstanceSettings(TypedDict):
     force_expire: bool
 
 
-def for_redis(data: Mapping) -> Dict[str, Union[int, str, float]]:
+def for_redis(data: Optional[Mapping]) -> Optional[Dict[str, Union[int, str, float]]]:
+    if not data:
+        return None
     mapping_capture: Dict[str, Union[float, int, str]] = {}
     for key, value in data.items():
         if value is None:
@@ -222,10 +224,10 @@ class Monitoring():
                 raise TimeError('Expiration time in the past.')
             p.set(f'{monitor_uuid}:expire', _expire)
 
-        if compare_settings:
-            p.hset(f'{monitor_uuid}:compare_settings', mapping=for_redis(compare_settings))
-        if notification:
-            p.hset(f'{monitor_uuid}:notification', mapping=for_redis(notification))
+        if _compare_settings := for_redis(compare_settings):
+            p.hset(f'{monitor_uuid}:compare_settings', mapping=_compare_settings)
+        if _notification := for_redis(notification):
+            p.hset(f'{monitor_uuid}:notification', mapping=_notification)
 
         p.sadd('monitored', monitor_uuid)
         p.execute()
