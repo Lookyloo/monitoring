@@ -240,7 +240,7 @@ class Monitoring():
         p.execute()
         return True
 
-    def compare_captures(self, monitor_uuid: str):
+    def compare_captures(self, monitor_uuid: str) -> Dict[str, Any]:
         if not self.redis.exists(f'{monitor_uuid}:captures'):
             raise CannotCompare(f'Monitoring UUID unknown: {monitor_uuid}')
         # Get all the capture UUIDs from most recent to oldest
@@ -361,7 +361,7 @@ class Monitoring():
         details = ''
         # For not, only add differences in the mail
         for compare_key, compare_details in comparison_results.items():
-            if compare_key in ['root_url', 'final_url', 'final_hostname', 'final_status_code']:
+            if compare_key in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'error']:
                 if isinstance(compare_details['details'], (str, int)):
                     # no difference
                     continue

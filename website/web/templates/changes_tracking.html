@@ -36,13 +36,7 @@
   </ul>
   {%endif%}
   <hr>
-  {% if 'error' in changes %}
-  Unable to compare: {{changes['error']}}
-  </br>
-  <pre>
-    {{changes['details']}}
-  </pre>
-  {% elif 'different' in changes and changes['different'] is false %}
+  {% if changes['different'] is false %}
    Both captures are the same.
    <pre>
    {{changes_txt}}
@@ -51,7 +45,7 @@
    Comparison of the two most recent captures:
    <ul>
    {% for k, info in changes.items() %}
-     {% if k in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'redirects'] %}
+     {% if k in ['root_url', 'final_url', 'final_hostname', 'final_status_code', 'redirects', 'error'] %}
        {% if k == 'redirects' %}
        <li>{{ info['length']['message'] }} ({{info['length']['details']}})</li>
        <li>Nodes to the landing page</li>
