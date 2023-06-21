@@ -2,6 +2,20 @@
 
 {% block title %}Compare captures{% endblock %}
 
+{% block scripts %}
+  {{ super() }}
+  <script>
+
+    function start_method(e) {
+      this.getElementsByClassName("btn")[0].disabled = true;
+      this.getElementsByClassName("btn")[0].textContent = "Monitoring started";
+    }
+
+    document.getElementsByName("start_monitoring")
+      .forEach(form => form.addEventListener('submit', start_method));
+  </script>
+{% endblock %}
+
 {% block content %}
 <div class="container">
   <table class="table">
@@ -12,6 +26,7 @@
       <th scope="col">Last capture</th>
       <th scope="col">Next capture</th>
       <th scope="col">Number of captures</th>
+      <th scope="col">Restart monitoring</th>
     </tr>
     </thead>
     <tbody>
@@ -40,6 +55,12 @@
         {% endif %}
       </td>
       <td>{{details['number_captures']}}</td>
+      <td>
+        <form method="POST" action="{{url_for('start_monitor', monitor_uuid=details['uuid'])}}"
+              name="start_monitoring" target="ignore">
+          <button type="submit" class="btn btn-primary" name="start_button">Start</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
     </tbody>

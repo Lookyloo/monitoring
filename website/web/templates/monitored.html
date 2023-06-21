@@ -6,14 +6,13 @@
   {{ super() }}
   <script>
 
-    function stop_method(event) {
-      const stop = document.getElementById("stop_button");
-      stop.disabled = true;
-      stop.textContent = "Monitoring stoped"
+    function stop_method(e) {
+      this.getElementsByClassName("btn")[0].disabled = true;
+      this.getElementsByClassName("btn")[0].textContent = "Monitoring stopped";
     }
 
-    const stop = document.getElementById("stop_monitoring");
-    stop.addEventListener("submit", stop_method);
+    document.getElementsByName("stop_monitoring")
+        .forEach(form => form.addEventListener('submit', stop_method));
   </script>
 {% endblock %}
 
@@ -57,8 +56,9 @@
       </td>
       <td>{{details['number_captures']}}</td>
       <td>
-        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}" id="stop_monitoring" target="ignore">
-          <button type="submit" class="btn btn-primary" id="stop_button">Stop</button>
+        <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}"
+                            name="stop_monitoring" target="ignore">
+          <button type="submit" class="btn btn-primary" name="stop_button">Stop</button>
         </form>
       </td>
     </tr>

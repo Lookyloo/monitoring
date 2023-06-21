@@ -140,6 +140,15 @@ class StopMonitor(Resource):
         return monitoring.stop_monitor(monitor_uuid)
 
 
+@api.route('/start_monitor/<string:monitor_uuid>')
+@api.doc(description='Start monitoring',
+         params={'monitor_uuid': 'The monitoring UUID'})
+class StartMonitor(Resource):
+
+    def post(self, monitor_uuid: str):
+        return monitoring.start_monitor(monitor_uuid)
+
+
 @api.route('/json/changes/<string:monitor_uuid>')
 @api.doc(description='Compare the captures for a specific monitored entry',
          params={'monitor_uuid': 'The monitoring UUID'})

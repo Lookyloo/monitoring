@@ -234,9 +234,23 @@ class Monitoring():
         return monitor_uuid
 
     def stop_monitor(self, monitor_uuid: str) -> bool:
+        if not self.redis.sismember('monitored', monitor_uuid):
+            # Already not monitored.
+            return False
         p = self.redis.pipeline()
         p.set(f'{monitor_uuid}:expire', datetime.now().timestamp())
         p.zrem('monitoring_queue', monitor_uuid)
+        p.execute()
+        return True
+
+    def start_monitor(self, monitor_uuid: str) -> bool:
+        if self.redis.sismember('monitored', monitor_uuid):
+            # Already monitored.
+            return False
+        p = self.redis.pipeline()
+        p.delete(f'{monitor_uuid}:expire')
+        p.smove('expired', 'monitored', monitor_uuid)
+        p.hincrby(f'{monitor_uuid}:capture_settings', 'restarted')
         p.execute()
         return True
 
@@ -274,11 +288,17 @@ class Monitoring():
                 self.redis.smove('monitored', 'expired', monitor_uuid)
                 logger.info('Expiration timestamp reached.')
                 continue
-            elif self.force_expire and self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures:
-                # Force expire monitoring
-                self.redis.smove('monitored', 'expired', monitor_uuid)
-                logger.info('Maximum amount of captures reached, expire..')
-                continue
+            elif self.force_expire:
+                _nb_restarts = self.redis.hget(f'{monitor_uuid}:capture_settings', 'restarted')
+                if not _nb_restarts:
+                    nb_restarts = 1
+                else:
+                    nb_restarts = int(_nb_restarts) + 1
+                if self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures * nb_restarts:
+                    # Force expire monitoring
+                    self.redis.smove('monitored', 'expired', monitor_uuid)
+                    logger.info('Maximum amount of captures reached, expire..')
+                    continue
 
             freq = self.redis.get(f'{monitor_uuid}:frequency')
             next_run = {monitor_uuid: 0.0}
