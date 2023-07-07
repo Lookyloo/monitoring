@@ -54,7 +54,7 @@ def for_redis(data: Optional[Mapping]) -> Optional[Dict[str, Union[int, str, flo
         return None
     mapping_capture: Dict[str, Union[float, int, str]] = {}
     for key, value in data.items():
-        if value is None:
+        if value in [None, '']:
             continue
         if isinstance(value, bool):
             mapping_capture[key] = 1 if value else 0
@@ -429,7 +429,7 @@ class Monitoring():
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         notification_settings: NotificationSettings
         if notification_settings := self.redis.hgetall(f'{monitor_uuid}:notification'):
-            if 'email' not in notification_settings:
+            if not notification_settings.get('email'):
                 logger.warning('Email to notify missing in notification settings, skip.')
                 return
 

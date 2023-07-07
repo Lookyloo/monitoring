@@ -25,11 +25,11 @@ werkzeug = "^2.3.6"
 gunicorn = "^20.1.0"
 cron-converter = "^1.0.2"
 bootstrap-flask = "^2.2.0"
-pylookyloo = "^1.19.3"
+pylookyloo = "^1.21.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.4.1"
-types-redis = {version = "^4.6.0.0"}
+types-redis = {version = "^4.6.0.2"}
 types-requests = "^2.31.0.1"
 
 [tool.poetry.group.old]
