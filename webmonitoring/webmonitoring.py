@@ -16,7 +16,7 @@ from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
 from .default import get_config, get_socket_path
-from .exceptions import TimeError, CannotCompare, InvalidSettings
+from .exceptions import TimeError, CannotCompare, InvalidSettings, UnknownUUID, AlreadyExpired, AlreadyMonitored
 from .helpers import get_useragent_for_requests, get_email_template
 from .mail import Mail
 
@@ -37,10 +37,13 @@ class NotificationSettings(TypedDict, total=False):
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
-    expire_at: Optional[str]
+    expire_at: Optional[Union[str, datetime]]
     collection: Optional[str]
     compare_settings: Optional[CompareSettings]
     notification: Optional[NotificationSettings]
+
+    # This UUID is used when we trigger an update on the settings
+    monitor_uuid: Optional[str]
 
 
 class MonitoringInstanceSettings(TypedDict):
@@ -122,10 +125,10 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
-    def get_expired(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_expired_entries(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
         return self._get_index('expired', collection)
 
-    def get_monitored(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_monitored_entries(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
         return self._get_index('monitored', collection)
 
     def _get_index(self, key: str, collection: Optional[str]) -> List[Dict[str, Any]]:
@@ -139,7 +142,7 @@ class Monitoring():
 
     def get_monitored_details(self, monitor_uuid: str) -> Dict[str, Any]:
         to_return: Dict[str, Any] = {'uuid': monitor_uuid}
-        to_return['capture_settings'] = self.get_monitored_settings(monitor_uuid)
+        to_return['capture_settings'] = self.get_capture_settings(monitor_uuid)
         try:
             to_return['next_capture'] = self.get_next_capture(monitor_uuid)
         except TimeError:
@@ -152,11 +155,28 @@ class Monitoring():
             to_return['number_captures'] = 0
         return to_return
 
-    def get_monitored_settings(self, monitor_uuid: str) -> Dict[str, Any]:
+    def get_capture_settings(self, monitor_uuid: str) -> CaptureSettings:
         return self.redis.hgetall(f'{monitor_uuid}:capture_settings')
 
-    def get_compare_settings(self, monitor_uuid: str) -> Dict[str, Any]:
-        return self.redis.hgetall(f'{monitor_uuid}:compare_settings')
+    def get_monitor_settings(self, monitor_uuid: str) -> MonitorSettings:
+        to_return: MonitorSettings = {'frequency': self.redis.get(f'{monitor_uuid}:frequency'),
+                                      'capture_settings': self.get_capture_settings(monitor_uuid)}
+        if expire_at := self.redis.get(f'{monitor_uuid}:expire'):
+            try:
+                to_return['expire_at'] = datetime.fromtimestamp(float(expire_at))
+            except Exception:
+                to_return['expire_at'] = expire_at
+        if collection := self.redis.get(f'{monitor_uuid}:collection'):
+            to_return['collection'] = collection
+        if compare_settings := self.get_compare_settings(monitor_uuid):
+            to_return['compare_settings'] = compare_settings
+        if notification := self.redis.hgetall(f'{monitor_uuid}:notification'):
+            to_return['notification'] = notification
+        return to_return
+
+    def get_compare_settings(self, monitor_uuid: str) -> CompareSettings:
+        return {k: json.loads(v)
+                for k, v in self.redis.hgetall(f'{monitor_uuid}:compare_settings').items()}  # type: ignore
 
     def _next_run_from_cron(self, cron_string: str, /) -> datetime:
         try:
@@ -168,25 +188,43 @@ class Monitoring():
             raise TimeError(f'Invalid cron format: {cron_string} - {e}')
 
     @overload
-    def monitor(self, /, *, monitor_settings: MonitorSettings) -> str:
+    def monitor(self, *, monitor_settings: MonitorSettings) -> str:
+        """Start a new monitoring with a MonitorSettings object"""
         ...
 
     @overload
-    def monitor(self, capture_settings: CaptureSettings, /, frequency: str, *,
+    def monitor(self, *, capture_settings: CaptureSettings, frequency: str,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
                 notification: Optional[NotificationSettings]=None) -> str:
+        """Start a new monitoring with individual parameters"""
         ...
 
-    def monitor(self, capture_settings: Optional[CaptureSettings]=None,
-                /, frequency: Optional[str]=None, *,
+    @overload
+    def monitor(self, *, monitor_uuid: str, capture_settings: Optional[CaptureSettings]=None,
+                frequency: Optional[str]=None,
+                expire_at: Optional[Union[datetime, str, int, float]]=None,
+                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
+                notification: Optional[NotificationSettings]=None) -> str:
+        """Update an existing monitoring with individual parameters"""
+        ...
+
+    def monitor(self, *, capture_settings: Optional[CaptureSettings]=None,
+                frequency: Optional[str]=None,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None,
                 compare_settings: Optional[CompareSettings]=None,
                 notification: Optional[NotificationSettings]=None,
-                monitor_settings: Optional[MonitorSettings]=None) -> str:
-
-        monitor_uuid = str(uuid4())
+                monitor_settings: Optional[MonitorSettings]=None,
+                monitor_uuid: Optional[str]=None) -> str:
+        is_update = False
+        if monitor_uuid:
+            if self.redis.exists(f'{monitor_uuid}:captures'):
+                is_update = True
+            else:
+                raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
+        else:
+            monitor_uuid = str(uuid4())
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         if monitor_settings:
             capture_settings = monitor_settings.get('capture_settings')
@@ -196,16 +234,19 @@ class Monitoring():
             compare_settings = monitor_settings.get('compare_settings')
             notification = monitor_settings.get('notification')
 
-        if not capture_settings:
+        if not capture_settings and not is_update:
             logger.critical('No capture settings')
             raise InvalidSettings('The capture settings are missing.')
-        if not frequency:
+        if not frequency and not is_update:
             logger.critical('No frequency')
             raise InvalidSettings('The frequency missing.')
 
         p = self.redis.pipeline()
-        p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
-        p.set(f'{monitor_uuid}:frequency', frequency.lower())
+        if capture_settings:
+            p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
+        if frequency:
+            p.set(f'{monitor_uuid}:frequency', frequency.lower())
+
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
             p.sadd('collections', collection)
@@ -234,9 +275,10 @@ class Monitoring():
         return monitor_uuid
 
     def stop_monitor(self, monitor_uuid: str) -> bool:
+        if not self.redis.exists(f'{monitor_uuid}:captures'):
+            raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
         if not self.redis.sismember('monitored', monitor_uuid):
-            # Already not monitored.
-            return False
+            raise AlreadyExpired(f'{monitor_uuid} is already expired')
         p = self.redis.pipeline()
         p.set(f'{monitor_uuid}:expire', datetime.now().timestamp())
         p.zrem('monitoring_queue', monitor_uuid)
@@ -244,9 +286,10 @@ class Monitoring():
         return True
 
     def start_monitor(self, monitor_uuid: str) -> bool:
+        if not self.redis.exists(f'{monitor_uuid}:captures'):
+            raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
         if self.redis.sismember('monitored', monitor_uuid):
-            # Already monitored.
-            return False
+            raise AlreadyMonitored(f'{monitor_uuid} is already monitored')
         p = self.redis.pipeline()
         p.delete(f'{monitor_uuid}:expire')
         p.smove('expired', 'monitored', monitor_uuid)
@@ -262,12 +305,7 @@ class Monitoring():
         if len(capture_uuids) < 2:
             raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
-        if _compare_settings := self.get_compare_settings(monitor_uuid):
-            compare_settings: CompareSettings = {}
-            if ressources_ignore_domains := _compare_settings.get('ressources_ignore_domains'):
-                compare_settings['ressources_ignore_domains'] = json.loads(ressources_ignore_domains)
-            if ressources_ignore_regexes := _compare_settings.get('ressources_ignore_regexes'):
-                compare_settings['ressources_ignore_regexes'] = json.loads(ressources_ignore_regexes)
+        if compare_settings := self.get_compare_settings(monitor_uuid):
             compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0],
                                                             compare_settings=compare_settings)
         else:
@@ -368,7 +406,7 @@ class Monitoring():
 
     def prepare_notification_mail(self, mail_to: str, monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
-        capture_settings = self.get_monitored_settings(monitor_uuid)
+        capture_settings = self.get_capture_settings(monitor_uuid)
         captured_url = capture_settings['url']
         email_config = get_config('generic', 'email')
         msg = EmailMessage()

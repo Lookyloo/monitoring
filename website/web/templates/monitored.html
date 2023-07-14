@@ -26,7 +26,9 @@
       <th scope="col">Last capture</th>
       <th scope="col">Next capture</th>
       <th scope="col">Number of captures</th>
+      {% if current_user.is_authenticated %}
       <th scope="col">Stop monitoring</th>
+      {%endif%}
     </tr>
     </thead>
     <tbody>
@@ -55,12 +57,14 @@
         {% endif %}
       </td>
       <td>{{details['number_captures']}}</td>
+      {% if current_user.is_authenticated %}
       <td>
         <form method="POST" action="{{url_for('stop_monitor', monitor_uuid=details['uuid'])}}"
                             name="stop_monitoring" target="ignore">
           <button type="submit" class="btn btn-primary" name="stop_button">Stop</button>
         </form>
       </td>
+      {% endif %}
     </tr>
     {% endfor %}
     </tbody>

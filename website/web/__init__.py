@@ -3,16 +3,21 @@
 import json
 
 from importlib.metadata import version
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, get_type_hints
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, flash, redirect, url_for
 from flask_bootstrap import Bootstrap5  # type: ignore
-from flask_restx import Api, Resource, fields  # type: ignore
+import flask_login  # type: ignore
+from flask_restx import Api, Resource, fields, abort  # type: ignore
+from flask_wtf import FlaskForm  # type: ignore
+from werkzeug.security import check_password_hash
+from wtforms import Form, StringField, DateTimeField, FieldList, FormField, EmailField  # type: ignore
+from wtforms.validators import DataRequired  # type: ignore
 
-from webmonitoring.exceptions import CannotCompare
-from webmonitoring.webmonitoring import Monitoring
+from webmonitoring.exceptions import CannotCompare, AlreadyExpired, AlreadyMonitored, UnknownUUID, InvalidSettings, TimeError
+from webmonitoring.webmonitoring import Monitoring, CompareSettings, NotificationSettings
 
-from .helpers import get_secret_key
+from .helpers import get_secret_key, build_users_table, User, load_user_from_request
 from .proxied import ReverseProxied
 
 app: Flask = Flask(__name__)
@@ -25,6 +30,57 @@ app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 app.config['SESSION_COOKIE_NAME'] = 'lookyloo_webmonitoring'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 app.debug = False
+
+# Auth stuff
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def user_loader(username):
+    if username not in build_users_table():
+        return None
+    user = User()
+    user.id = username
+    return user
+
+
+@login_manager.request_loader
+def _load_user_from_request(request):
+    return load_user_from_request(request)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return '''
+               <form action='login' method='POST'>
+                <input type='text' name='username' id='username' placeholder='username'/>
+                <input type='password' name='password' id='password' placeholder='password'/>
+                <input type='submit' name='submit'/>
+               </form>
+               '''
+
+    username = request.form['username']
+    users_table = build_users_table()
+    if username in users_table and check_password_hash(users_table[username]['password'], request.form['password']):
+        user = User()
+        user.id = username
+        flask_login.login_user(user)
+        flash(f'Logged in as: {flask_login.current_user.id}', 'success')
+    else:
+        flash(f'Unable to login as: {username}', 'error')
+
+    return redirect(url_for('index'))
+
+
+@app.route('/logout')
+@flask_login.login_required
+def logout():
+    flask_login.logout_user()
+    flash('Successfully logged out.', 'success')
+    return redirect(url_for('index'))
+
 
 monitoring: Monitoring = Monitoring()
 
@@ -45,9 +101,9 @@ def collections():
 
 def _index(index_type: str, collection: Optional[str]):
     if index_type == 'monitored':
-        to_index = monitoring.get_monitored(collection=collection)
+        to_index = monitoring.get_monitored_entries(collection=collection)
     elif index_type == 'expired':
-        to_index = monitoring.get_expired(collection=collection)
+        to_index = monitoring.get_expired_entries(collection=collection)
     else:
         raise Exception(f'Can only be monitored or expired, not {index_type}')
     return render_template(f'{index_type}.html', monitored_index=to_index)
@@ -65,25 +121,125 @@ def expired(collection: Optional[str]=None):
     return _index('expired', collection)
 
 
-@app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET'])
+class CompareSettingsForm(Form):
+    ressources_ignore_domains = FieldList(StringField('Domain'), label="Domains to ignore in comparison", min_entries=5)
+    ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
+
+
+class NotificationForm(Form):
+    email = EmailField('Email to notify')
+
+
+class MonitoringForm(FlaskForm):
+    frequency = StringField(label='Capture frequency', validators=[DataRequired()])
+    expire_at = DateTimeField('Expire monitoring at')
+    collection = StringField('Collection of the monitored URL')
+    compare_settings = FormField(CompareSettingsForm)
+    notification = FormField(NotificationForm)
+
+
+@app.route('/changes_tracking/<string:monitor_uuid>', methods=['GET', 'POST'])
 def changes_tracking(monitor_uuid: str):
+    form = MonitoringForm()
+    if form.validate_on_submit():
+        if not flask_login.current_user.is_authenticated:
+            flash("You must be authenticated to change the settings.", 'error')
+        else:
+            # Cleanup compare settings
+            compare_settings: CompareSettings = {}
+            for k in get_type_hints(CompareSettings).keys():
+                if values := form.compare_settings.data[k]:
+                    if content := [x for x in set(values) if x != '']:
+                        compare_settings[k] = content  # type: ignore
+
+            notification: NotificationSettings = {}
+            for k in get_type_hints(NotificationSettings).keys():
+                notification[k] = form.notification.data[k]  # type: ignore
+
+            try:
+                monitoring.monitor(
+                    monitor_uuid=monitor_uuid,
+                    frequency=form.frequency.data if form.frequency.data else None,
+                    expire_at=form.expire_at.data if form.expire_at.data else None,
+                    collection=form.collection.data if form.collection.data else None,
+                    compare_settings=compare_settings if compare_settings else None,
+                    notification=notification if notification else None
+                )
+            except Exception as e:
+                flash(str(e), 'error')
+
+    elif form.errors:
+        for key, message in form.errors.items():
+            flash(f'{key}: {message}', 'error')
+
+    monitor_settings = monitoring.get_monitor_settings(monitor_uuid)
+    form = MonitoringForm(data=monitor_settings)
     details = monitoring.get_monitored_details(monitor_uuid)
-    settings = monitoring.get_compare_settings(monitor_uuid)
     if details['number_captures'] < 2:
         changes = {}
     else:
         changes = monitoring.compare_captures(monitor_uuid)
     return render_template('changes_tracking.html',
+                           monitor_uuid=monitor_uuid,
+                           monitoring_form=form,
                            details=details,
-                           settings=settings,
                            changes=changes,
                            changes_txt=json.dumps(changes, indent=2))
 
 
+# ################## API ##################
+
+# Query API
+authorizations = {
+    'apikey': {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'Authorization'
+    }
+}
+
 api = Api(app, title='Web Monitoring API',
           description='API to query the web monitoring.',
           doc='/doc/',
-          version=version('webmonitoring'))
+          version=version('webmonitoring'),
+          authorizations=authorizations)
+
+
+def api_auth_check(method):
+    if flask_login.current_user.is_authenticated or load_user_from_request(request):
+        return method
+    abort(403, 'Authentication required.')
+
+
+token_request_fields = api.model('AuthTokenFields', {
+    'username': fields.String(description="Your username", required=True),
+    'password': fields.String(description="Your password", required=True),
+})
+
+
+@api.route('/json/get_token')
+@api.doc(description='Get the API token required for authenticated calls')
+class AuthToken(Resource):
+
+    users_table = build_users_table()
+
+    @api.param('username', 'Your username')
+    @api.param('password', 'Your password')
+    def get(self):
+        username: Optional[str] = request.args['username'] if request.args.get('username') else None
+        password: Optional[str] = request.args['password'] if request.args.get('password') else None
+        if username and password and username in self.users_table and check_password_hash(self.users_table[username]['password'], password):
+            return {'authkey': self.users_table[username]['authkey']}
+        return {'error': 'User/Password invalid.'}, 401
+
+    @api.doc(body=token_request_fields)
+    def post(self):
+        auth: Dict = request.get_json(force=True)
+        if 'username' in auth and 'password' in auth:  # Expected keys in json
+            if (auth['username'] in self.users_table
+                    and check_password_hash(self.users_table[auth['username']]['password'], auth['password'])):
+                return {'authkey': self.users_table[auth['username']]['authkey']}
+        return {'error': 'User/Password invalid.'}, 401
 
 
 @api.route('/redis_up')
@@ -124,29 +280,62 @@ class Monitor(Resource):
     @api.doc(body=monitor_fields_post)
     def post(self):
         monit: Dict[str, Any] = request.get_json(force=True)
-        monitor_uuid = monitoring.monitor(monit['capture_settings'], frequency=monit['frequency'],
+        monitor_uuid = monitoring.monitor(capture_settings=monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'),
                                           compare_settings=monit.get('compare_settings'),
                                           notification=monit.get('notification'))
         return monitor_uuid
 
 
+@api.route('/update_monitor/<string:monitor_uuid>')
+@api.doc(description='Change the settings of a monitoring',
+         params={'monitor_uuid': 'The monitoring UUID'},
+         security='apikey')
+class UpdateMonitor(Resource):
+    method_decorators = [api_auth_check]
+
+    @api.doc(body=monitor_fields_post)
+    def post(self, monitor_uuid: str):
+        monit: Dict[str, Any] = request.get_json(force=True)
+        try:
+            monitor_uuid = monitoring.monitor(monitor_uuid=monitor_uuid,
+                                              capture_settings=monit.get('capture_settings'),
+                                              frequency=monit.get('frequency'),
+                                              expire_at=monit.get('expire_at'),
+                                              collection=monit.get('collection'),
+                                              compare_settings=monit.get('compare_settings'),
+                                              notification=monit.get('notification'))
+            return monitor_uuid
+        except (UnknownUUID, InvalidSettings, TimeError) as e:
+            return {'message': str(e)}
+
+
 @api.route('/stop_monitor/<string:monitor_uuid>')
 @api.doc(description='Stop monitoring',
-         params={'monitor_uuid': 'The monitoring UUID'})
+         params={'monitor_uuid': 'The monitoring UUID'},
+         security='apikey')
 class StopMonitor(Resource):
+    method_decorators = [api_auth_check]
 
     def post(self, monitor_uuid: str):
-        return monitoring.stop_monitor(monitor_uuid)
+        try:
+            return monitoring.stop_monitor(monitor_uuid)
+        except (UnknownUUID, AlreadyExpired) as e:
+            return {'message': str(e)}
 
 
 @api.route('/start_monitor/<string:monitor_uuid>')
 @api.doc(description='Start monitoring',
-         params={'monitor_uuid': 'The monitoring UUID'})
+         params={'monitor_uuid': 'The monitoring UUID'},
+         security='apikey')
 class StartMonitor(Resource):
+    method_decorators = [api_auth_check]
 
     def post(self, monitor_uuid: str):
-        return monitoring.start_monitor(monitor_uuid)
+        try:
+            return monitoring.start_monitor(monitor_uuid)
+        except (UnknownUUID, AlreadyMonitored) as e:
+            return {'message': str(e)}
 
 
 @api.route('/json/changes/<string:monitor_uuid>')
@@ -187,7 +376,7 @@ class JsonMonitored(Resource):
 
     @api.marshal_with(monitor_field_response, skip_none=True)
     def get(self, collection: Optional[str]=None):
-        return monitoring.get_monitored(collection)
+        return monitoring.get_monitored_entries(collection)
 
 
 @api.route('/json/expired',
@@ -199,7 +388,7 @@ class JsonExpired(Resource):
 
     @api.marshal_with(monitor_field_response, skip_none=True)
     def get(self, collection: Optional[str]=None):
-        return monitoring.get_expired(collection)
+        return monitoring.get_expired_entries(collection)
 
 
 @api.route('/json/settings')

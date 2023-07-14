@@ -7,6 +7,7 @@
     "min_frequency": 3000,
     "max_captures": 10,
     "force_expire": true,
+    "users": {},
     "email": {
         "smtp_host": "localhost",
         "smtp_port": "25",
@@ -29,6 +30,7 @@
         "min_frequency": "Do not schedule captures more often than this value (mist be an int, in seconds)",
         "max_captures": "Automatically expire the monitoring when this amount of captures has been triggered.",
         "force_expire": "If true, the expiring time will be set to a maximum of the frequency (provded by the user, or min_frequency if higher) * the max amount of captures.",
+        "users": "It is some kind of an admin accounts. Format: {username: password}",
         "email": "Email configuration to send notifications",
         "email_smtp_auth": "Email SMTP auth configuration to send notifications"
     }

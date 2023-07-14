@@ -1,19 +1,18 @@
 {% extends "base.html" %}
 
+{% from 'bootstrap5/utils.html' import render_messages %}
+
 {% block title %}Changes{% endblock %}
 
 {% block content %}
 
+{{ render_messages(container=True, dismissible=True) }}
+
 <div class="container">
   <ul>
-    <li>Capture settings:
+    <li>Capture settings (to change them, please trigger a new monitoring from lookyloo):
       <pre>
       {{details['capture_settings']}}
-      </pre>
-    </li>
-    <li>Comparison settings:
-      <pre>
-      {{settings}}
       </pre>
     </li>
     {% if 'next_capture' in details%}
@@ -28,6 +27,37 @@
     <li>Last one triggered at {{details['last_capture'].isoformat()}}</li>
     {%endif%}
   </ul>
+
+  <form method="POST" action="{{ url_for('changes_tracking', monitor_uuid=monitor_uuid)}}">
+    {{ monitoring_form.csrf_token }}
+    <div class="mb-3">
+    {{ monitoring_form.frequency.label }} {{ monitoring_form.frequency(size=20) }}
+    </div>
+    <div class="mb-3">
+    {{ monitoring_form.expire_at.label }} {{ monitoring_form.expire_at(size=20) }}
+    </div>
+    <div class="mb-3">
+    {{ monitoring_form.collection.label }} {{ monitoring_form.collection(size=20) }}
+    </div>
+    <div class="mb-3">
+    {{ monitoring_form.compare_settings}}
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="mb-3">
+    {{ monitoring_form.notification}}
+    </div>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+    <input type="submit" value="Update">
+    {%else%}
+    <div class="mb-3">
+        You must be authenticated to change the settings.
+    </div>
+    {% endif %}
+  </form>
+
   {% if 'lookyloo_urls' in changes%}
   <h4>Links to the captures on Lookyloo</h4>
   <ul>
