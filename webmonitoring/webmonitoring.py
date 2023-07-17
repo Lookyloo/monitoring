@@ -12,6 +12,7 @@ from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMa
 
 from cron_converter import Cron  # type: ignore
 from pylookyloo import Lookyloo, CaptureSettings
+from requests.exceptions import ConnectionError
 from redis import ConnectionPool, Redis
 from redis.connection import UnixDomainSocketConnection
 
@@ -219,7 +220,8 @@ class Monitoring():
                 monitor_uuid: Optional[str]=None) -> str:
         is_update = False
         if monitor_uuid:
-            if self.redis.exists(f'{monitor_uuid}:captures'):
+            if (self.redis.sismember('monitored', monitor_uuid)
+                    or self.redis.sismember('expired', monitor_uuid)):
                 is_update = True
             else:
                 raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
@@ -292,7 +294,8 @@ class Monitoring():
         return monitor_uuid
 
     def stop_monitor(self, monitor_uuid: str) -> bool:
-        if not self.redis.exists(f'{monitor_uuid}:captures'):
+        if not (self.redis.sismember('monitored', monitor_uuid)
+                or self.redis.sismember('expired', monitor_uuid)):
             raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
         if not self.redis.sismember('monitored', monitor_uuid):
             raise AlreadyExpired(f'{monitor_uuid} is already expired')
@@ -303,7 +306,8 @@ class Monitoring():
         return True
 
     def start_monitor(self, monitor_uuid: str) -> bool:
-        if not self.redis.exists(f'{monitor_uuid}:captures'):
+        if not (self.redis.sismember('monitored', monitor_uuid)
+                or self.redis.sismember('expired', monitor_uuid)):
             raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
         if self.redis.sismember('monitored', monitor_uuid):
             raise AlreadyMonitored(f'{monitor_uuid} is already monitored')
@@ -316,7 +320,7 @@ class Monitoring():
 
     def compare_captures(self, monitor_uuid: str) -> Dict[str, Any]:
         if not self.redis.exists(f'{monitor_uuid}:captures'):
-            raise CannotCompare(f'Monitoring UUID unknown: {monitor_uuid}')
+            raise CannotCompare(f'No captures available for {monitor_uuid}')
         # Get all the capture UUIDs from most recent to oldest
         capture_uuids = self.redis.zrevrangebyscore(f'{monitor_uuid}:captures', '+Inf', 0, withscores=True)
         if len(capture_uuids) < 2:
@@ -392,13 +396,16 @@ class Monitoring():
             settings: CaptureSettings = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
             settings['listing'] = False  # force the monitored capture our of the lookyloo index page
             logger.info('Trigering capture')
-            new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
-            if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
-                self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
-                # Check if the monitoring settings have notification settings
-                if self.redis.exists(f'{monitor_uuid}:notification'):
-                    # Flag it for the notification mechanism
-                    self.redis.hset('to_notify', mapping={monitor_uuid: new_capture_uuid})
+            try:
+                new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
+                if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
+                    self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
+                    # Check if the monitoring settings have notification settings
+                    if self.redis.exists(f'{monitor_uuid}:notification'):
+                        # Flag it for the notification mechanism
+                        self.redis.hset('to_notify', mapping={monitor_uuid: new_capture_uuid})
+            except ConnectionError as e:
+                logger.warning(f'Unable to connect to lookyloo: {e}')
 
     def process_notifications(self):
         # Iterate over monitoring that requires a notification
