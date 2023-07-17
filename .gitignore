@@ -118,3 +118,6 @@ config/*.json.bkp
 
 # Projects
 projects/
+
+# Logs
+logs/

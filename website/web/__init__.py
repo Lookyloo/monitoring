@@ -149,13 +149,12 @@ def changes_tracking(monitor_uuid: str):
             compare_settings: CompareSettings = {}
             for k in get_type_hints(CompareSettings).keys():
                 if values := form.compare_settings.data[k]:
-                    if content := [x for x in set(values) if x != '']:
-                        compare_settings[k] = content  # type: ignore
+                    # Empty list is fine, it is how we remove all entries
+                    compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
 
             notification: NotificationSettings = {}
             for k in get_type_hints(NotificationSettings).keys():
                 notification[k] = form.notification.data[k]  # type: ignore
-
             try:
                 monitoring.monitor(
                     monitor_uuid=monitor_uuid,

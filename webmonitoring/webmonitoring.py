@@ -252,6 +252,8 @@ class Monitoring():
             p.sadd('collections', collection)
             p.sadd(f'collections:{collection}', monitor_uuid)
             logger.info(f'Capture added to monitoring in collection "{collection}"')
+        elif is_update:
+            p.delete(f'{monitor_uuid}:collection')
         else:
             logger.info('Capture added to monitoring')
 
@@ -265,10 +267,25 @@ class Monitoring():
                 raise TimeError('Expiration time in the past.')
             p.set(f'{monitor_uuid}:expire', _expire)
 
-        if _compare_settings := for_redis(compare_settings):
-            p.hset(f'{monitor_uuid}:compare_settings', mapping=_compare_settings)
-        if _notification := for_redis(notification):
-            p.hset(f'{monitor_uuid}:notification', mapping=_notification)
+        if compare_settings:
+            _compare_settings = for_redis(compare_settings)
+            if _compare_settings:
+                p.hset(f'{monitor_uuid}:compare_settings', mapping=_compare_settings)
+            if is_update and _compare_settings is not None:
+                # the keys with empty values have been removed
+                # On update, we want to remove them from the hash too
+                if to_delete := compare_settings.keys() - _compare_settings.keys():
+                    p.hdel(f'{monitor_uuid}:compare_settings', *to_delete)
+
+        if notification:
+            _notification = for_redis(notification)
+            if _notification:
+                p.hset(f'{monitor_uuid}:notification', mapping=_notification)
+            if is_update and _notification is not None:
+                # the keys with empty values have been removed
+                # On update, we want to remove them from the hash too
+                if to_delete := notification.keys() - _notification.keys():
+                    p.hdel(f'{monitor_uuid}:notification', *to_delete)
 
         p.sadd('monitored', monitor_uuid)
         p.execute()
