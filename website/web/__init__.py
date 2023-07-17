@@ -286,6 +286,18 @@ class Monitor(Resource):
         return monitor_uuid
 
 
+@api.route('/settings_monitor/<string:monitor_uuid>')
+@api.doc(description='Get the settings of a monitoring',
+         params={'monitor_uuid': 'The monitoring UUID'})
+class SettingsMonitor(Resource):
+
+    def get(self, monitor_uuid: str):
+        settings = monitoring.get_monitor_settings(monitor_uuid)
+        if 'expire_at' in settings:
+            settings['expire_at'] = settings['expire_at'].timestamp()
+        return settings
+
+
 @api.route('/update_monitor/<string:monitor_uuid>')
 @api.doc(description='Change the settings of a monitoring',
          params={'monitor_uuid': 'The monitoring UUID'},
