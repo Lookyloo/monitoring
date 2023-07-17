@@ -2,6 +2,7 @@
 
 import json
 
+from datetime import datetime
 from importlib.metadata import version
 from typing import Dict, Any, Optional, get_type_hints
 
@@ -293,7 +294,7 @@ class SettingsMonitor(Resource):
 
     def get(self, monitor_uuid: str):
         settings = monitoring.get_monitor_settings(monitor_uuid)
-        if 'expire_at' in settings:
+        if 'expire_at' in settings and settings['expire_at'] is not None and isinstance(settings['expire_at'], datetime):
             settings['expire_at'] = settings['expire_at'].timestamp()
         return settings
 

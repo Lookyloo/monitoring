@@ -38,7 +38,7 @@ class NotificationSettings(TypedDict, total=False):
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
-    expire_at: Optional[Union[str, datetime]]
+    expire_at: Optional[Union[str, datetime, float]]
     collection: Optional[str]
     compare_settings: Optional[CompareSettings]
     notification: Optional[NotificationSettings]
