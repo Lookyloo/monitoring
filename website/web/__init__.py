@@ -274,7 +274,7 @@ monitor_fields_post = api.model('MonitorFieldsPost', {
 
 
 @api.route('/monitor')
-@api.doc(description='Add a capture in the monitoring')
+@api.doc(description='Add a capture in the monitoring. The capture_settings key accepts all the settings supported by lookyloo.')
 class Monitor(Resource):
 
     @api.doc(body=monitor_fields_post)
