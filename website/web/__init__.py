@@ -12,8 +12,7 @@ import flask_login  # type: ignore
 from flask_restx import Api, Resource, fields, abort  # type: ignore
 from flask_wtf import FlaskForm  # type: ignore
 from werkzeug.security import check_password_hash
-from wtforms import Form, StringField, DateTimeField, FieldList, FormField, EmailField  # type: ignore
-from wtforms.validators import DataRequired  # type: ignore
+from wtforms import Form, StringField, DateTimeField, FieldList, FormField, EmailField, validators  # type: ignore
 
 from webmonitoring.exceptions import CannotCompare, AlreadyExpired, AlreadyMonitored, UnknownUUID, InvalidSettings, TimeError
 from webmonitoring.webmonitoring import Monitoring, CompareSettings, NotificationSettings
@@ -132,8 +131,8 @@ class NotificationForm(Form):
 
 
 class MonitoringForm(FlaskForm):
-    frequency = StringField(label='Capture frequency', validators=[DataRequired()])
-    expire_at = DateTimeField('Expire monitoring at')
+    frequency = StringField(label='Capture frequency', validators=[validators.DataRequired()])
+    expire_at = DateTimeField('Expire monitoring at', validators=[validators.Optional()])
     collection = StringField('Collection of the monitored URL')
     compare_settings = FormField(CompareSettingsForm)
     notification = FormField(NotificationForm)
