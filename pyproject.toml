@@ -31,7 +31,7 @@ flask-login = "^0.6.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5.1"
-types-redis = {version = "^4.6.0.4"}
+types-redis = {version = "^4.6.0.5"}
 types-requests = "^2.31.0.2"
 
 [tool.poetry.group.old]
