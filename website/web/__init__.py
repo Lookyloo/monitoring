@@ -12,7 +12,7 @@ import flask_login  # type: ignore
 from flask_restx import Api, Resource, fields, abort  # type: ignore
 from flask_wtf import FlaskForm  # type: ignore
 from werkzeug.security import check_password_hash
-from wtforms import Form, StringField, DateTimeLocalField, FieldList, FormField, EmailField, validators  # type: ignore
+from wtforms import Form, StringField, DateTimeLocalField, FieldList, FormField, EmailField, BooleanField, validators  # type: ignore
 
 from webmonitoring.exceptions import CannotCompare, AlreadyExpired, AlreadyMonitored, UnknownUUID, InvalidSettings, TimeError
 from webmonitoring.webmonitoring import Monitoring, CompareSettings, NotificationSettings
@@ -124,6 +124,7 @@ def expired(collection: Optional[str]=None):
 class CompareSettingsForm(Form):
     ressources_ignore_domains = FieldList(StringField('Domain'), label="Domains to ignore in comparison", min_entries=5)
     ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
+    ignore_ips = BooleanField(label='Ignore IPs in comparison', description='Avoid flagging two captures are different when served on CDNs.')
 
 
 class NotificationForm(Form):
@@ -148,9 +149,12 @@ def changes_tracking(monitor_uuid: str):
             # Cleanup compare settings
             compare_settings: CompareSettings = {}
             for k in get_type_hints(CompareSettings).keys():
-                if values := form.compare_settings.data[k]:
-                    # Empty list is fine, it is how we remove all entries
-                    compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
+                if k in ['ressources_ignore_domains', 'ressources_ignore_regexes']:
+                    if values := form.compare_settings.data[k]:
+                        # Empty list is fine, it is how we remove all entries
+                        compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
+                elif k == 'ignore_ips':
+                    compare_settings[k] = bool(form.compare_settings.data[k])  # type: ignore
 
             notification: NotificationSettings = {}
             for k in get_type_hints(NotificationSettings).keys():
@@ -255,7 +259,8 @@ capture_settings_mapping = api.model('CaptureSettings', {
 
 compare_settings_mapping = api.model('CompareSettings', {
     'ressources_ignore_domains': fields.List(fields.String(description="A domain to ignore")),
-    'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL"))
+    'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL")),
+    'ignore_ips': fields.Boolean('Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.')
 })
 
 notification_mapping = api.model('NotificationSettings', {

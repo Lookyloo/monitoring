@@ -28,6 +28,8 @@ class CompareSettings(TypedDict, total=False):
     ressources_ignore_domains: Optional[List[str]]
     ressources_ignore_regexes: Optional[List[str]]
 
+    ignore_ips: Optional[bool]
+
 
 class NotificationSettings(TypedDict, total=False):
     '''The notification settings for a monitoring'''
