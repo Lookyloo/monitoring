@@ -32,7 +32,7 @@ def validate_generic_config_file():
         if key == '_notes':
             continue
         if generic_config.get(key) is None:
-            logger.warning(f'Entry missing in user config file: {key}. Will default to: {generic_config_sample[key]}')
+            logger.warning(f'Entry missing in user config file: {key}. Will default to: "{generic_config_sample[key]}"')
             continue
         if not isinstance(generic_config[key], type(generic_config_sample[key])):
             raise Exception(f'Invalid type for {key}. Got: {type(generic_config[key])} ({generic_config[key]}), expected: {type(generic_config_sample[key])} ({generic_config_sample[key]})')

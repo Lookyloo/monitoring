@@ -111,6 +111,7 @@ class Monitoring():
         self.min_frequency = int(get_config('generic', 'min_frequency'))
         self.max_captures = int(get_config('generic', 'max_captures'))
         self.force_expire = get_config('generic', 'force_expire')
+        self.force_notification: Optional[NotificationSettings] = {'email': get_config('generic', 'force_notification')}
 
     @property
     def redis(self):
@@ -403,7 +404,7 @@ class Monitoring():
                 if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
                     self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
                     # Check if the monitoring settings have notification settings
-                    if self.redis.exists(f'{monitor_uuid}:notification'):
+                    if self.redis.exists(f'{monitor_uuid}:notification') or self.force_notification:
                         # Flag it for the notification mechanism
                         self.redis.hset('to_notify', mapping={monitor_uuid: new_capture_uuid})
             except ConnectionError as e:
@@ -430,7 +431,7 @@ class Monitoring():
             else:
                 logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
 
-    def prepare_notification_mail(self, mail_to: str, monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
+    def prepare_notification_mail(self, mail_to: Union[str, List[str]], monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         capture_settings = self.get_capture_settings(monitor_uuid)
         captured_url = capture_settings['url']
@@ -438,10 +439,10 @@ class Monitoring():
         msg = EmailMessage()
         msg['Subject'] = f"Monitoring notification for {captured_url} ({monitor_uuid})"
         msg['From'] = email_config['from']
-        # if isinstance(mail_to, str):
-        msg['To'] = mail_to
-        # else:
-        #     msg['To'] = ', '.join(mail_to)
+        if isinstance(mail_to, str):
+            msg['To'] = mail_to
+        else:
+            msg['To'] = ', '.join(mail_to)
         details = ''
         # For not, only add differences in the mail
         for compare_key, compare_details in comparison_results.items():
@@ -491,27 +492,33 @@ class Monitoring():
 
     def notify(self, monitor_uuid: str):
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
-        notification_settings: NotificationSettings
-        if notification_settings := self.redis.hgetall(f'{monitor_uuid}:notification'):
-            if not notification_settings.get('email'):
+        notification_settings: NotificationSettings = self.redis.hgetall(f'{monitor_uuid}:notification')
+        emails_to_notify: List[str] = []
+        if notification_settings:
+            if notification_settings.get('email'):
+                emails_to_notify.append(notification_settings['email'])
+            else:
                 logger.warning('Email to notify missing in notification settings, skip.')
-                return
+        if self.force_notification and self.force_notification.get('email'):
+            emails_to_notify.append(self.force_notification['email'])
 
-            try:
-                results = self.compare_captures(monitor_uuid)
-                if 'different' in results and results['different'] is False:
-                    # No difference, do not notify.
-                    logger.info('No differences between the last two captures, skip notification.')
-                    return
-                mail = self.prepare_notification_mail(
-                    mail_to=notification_settings['email'],
-                    monitor_uuid=monitor_uuid,
-                    comparison_results=results)
-                if Mail.send(mail):
-                    logger.debug('Notification sent successfully')
-                else:
-                    logger.debug('Unable to send notification')
-            except CannotCompare as e:
-                logger.warning(f'Unable to run a comparison: {e}')
-        else:
-            logger.warning('No notification settings, ignore.')
+        if not emails_to_notify:
+            logger.warning('No emails to notify, ignore.')
+            return
+
+        try:
+            results = self.compare_captures(monitor_uuid)
+            if 'different' in results and results['different'] is False:
+                # No difference, do not notify.
+                logger.info('No differences between the last two captures, skip notification.')
+                return
+            mail = self.prepare_notification_mail(
+                mail_to=emails_to_notify,
+                monitor_uuid=monitor_uuid,
+                comparison_results=results)
+            if Mail.send(mail):
+                logger.debug('Notification sent successfully')
+            else:
+                logger.debug('Unable to send notification')
+        except CannotCompare as e:
+            logger.warning(f'Unable to run a comparison: {e}')
