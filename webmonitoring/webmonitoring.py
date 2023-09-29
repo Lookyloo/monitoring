@@ -522,3 +522,5 @@ class Monitoring():
                 logger.debug('Unable to send notification')
         except CannotCompare as e:
             logger.warning(f'Unable to run a comparison: {e}')
+        except Exception as e:
+            logger.error(f'Error when preparing notification message: {e}')
