@@ -63,6 +63,10 @@
       {{ monitoring_form.compare_settings.ignore_ips.label(class="form-label") }}
       {{ monitoring_form.compare_settings.ignore_ips(class="form-check-input") }}
     </div>
+    <div class="mb-3">
+      {{ monitoring_form.compare_settings.skip_failed_captures.label(class="form-label") }}
+      {{ monitoring_form.compare_settings.skip_failed_captures(class="form-check-input") }}
+    </div>
 
     {% if current_user.is_authenticated %}
     <div class="mb-3">

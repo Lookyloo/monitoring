@@ -30,6 +30,8 @@ class CompareSettings(TypedDict, total=False):
 
     ignore_ips: Optional[bool]
 
+    skip_failed_captures: Optional[bool]
+
 
 class NotificationSettings(TypedDict, total=False):
     '''The notification settings for a monitoring'''
@@ -200,6 +202,7 @@ class Monitoring():
     def monitor(self, *, capture_settings: CaptureSettings, frequency: str,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
+
                 notification: Optional[NotificationSettings]=None) -> str:
         """Start a new monitoring with individual parameters"""
         ...
@@ -330,7 +333,19 @@ class Monitoring():
             raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
         if compare_settings := self.get_compare_settings(monitor_uuid):
-            compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0],
+            if compare_settings.pop('skip_failed_captures', False):
+                valid_captures = []
+                for c in capture_uuids:
+                    capture_info = self.lookyloo.get_info(c[0])
+                    if 'error' in capture_info:
+                        continue
+                    valid_captures.append(c[0])
+                first_capture = valid_captures[0]
+                second_capture = valid_captures[1]
+            else:
+                first_capture = capture_uuids[0][0]
+                second_capture = capture_uuids[1][0]
+            compare_result = self.lookyloo.compare_captures(first_capture, second_capture,
                                                             compare_settings=compare_settings)
         else:
             compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
@@ -450,7 +465,7 @@ class Monitoring():
                 if isinstance(compare_details['details'], (str, int)):
                     # no difference
                     continue
-                details += f'  * {compare_details["message"]} - Before: {compare_details["details"][0]} / After {compare_details["details"][1]}\n'
+                details += f'  * {compare_details["message"]} - Before: {compare_details["details"][0]} / After: {compare_details["details"][1]}\n'
             elif compare_key == 'redirects':
                 details += '  * Redirects:\n'
                 if not isinstance(compare_details['length']['details'], int):

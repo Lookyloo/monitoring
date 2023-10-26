@@ -125,6 +125,7 @@ class CompareSettingsForm(Form):
     ressources_ignore_domains = FieldList(StringField('Domain'), label="Domains to ignore in comparison", min_entries=5)
     ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
     ignore_ips = BooleanField(label='Ignore IPs in comparison', description='Avoid flagging two captures are different when served on CDNs.')
+    skip_failed_captures = BooleanField(label='Skip failed captures', description='Avoid attempting to capture two captures when one of them failed.')
 
 
 class NotificationForm(Form):
@@ -153,7 +154,7 @@ def changes_tracking(monitor_uuid: str):
                     if values := form.compare_settings.data[k]:
                         # Empty list is fine, it is how we remove all entries
                         compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
-                elif k == 'ignore_ips':
+                elif k in ['ignore_ips', 'skip_failed_captures']:
                     compare_settings[k] = bool(form.compare_settings.data[k])  # type: ignore
 
             notification: NotificationSettings = {}
