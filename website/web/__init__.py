@@ -261,7 +261,8 @@ capture_settings_mapping = api.model('CaptureSettings', {
 compare_settings_mapping = api.model('CompareSettings', {
     'ressources_ignore_domains': fields.List(fields.String(description="A domain to ignore")),
     'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL")),
-    'ignore_ips': fields.Boolean('Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.')
+    'ignore_ips': fields.Boolean('Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.'),
+    'skip_failed_captures': fields.Boolean('Skip failed captures. Avoid attempting to capture two captures when one of them failed.')
 })
 
 notification_mapping = api.model('NotificationSettings', {
