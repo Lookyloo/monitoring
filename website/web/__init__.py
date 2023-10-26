@@ -125,7 +125,7 @@ class CompareSettingsForm(Form):
     ressources_ignore_domains = FieldList(StringField('Domain'), label="Domains to ignore in comparison", min_entries=5)
     ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
     ignore_ips = BooleanField(label='Ignore IPs in comparison', description='Avoid flagging two captures are different when served on CDNs.')
-    skip_failed_captures = BooleanField(label='Skip failed captures', description='Avoid attempting to capture two captures when one of them failed.')
+    skip_failed_captures = BooleanField(label='Skip failed captures', description='Avoid attempting to compare two captures when one of them failed.')
 
 
 class NotificationForm(Form):
@@ -261,8 +261,8 @@ capture_settings_mapping = api.model('CaptureSettings', {
 compare_settings_mapping = api.model('CompareSettings', {
     'ressources_ignore_domains': fields.List(fields.String(description="A domain to ignore")),
     'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL")),
-    'ignore_ips': fields.Boolean('Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.'),
-    'skip_failed_captures': fields.Boolean('Skip failed captures. Avoid attempting to capture two captures when one of them failed.')
+    'ignore_ips': fields.Boolean(False, description='Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.'),
+    'skip_failed_captures': fields.Boolean(False, description='Skip failed captures. Avoid attempting to compare two captures when one of them failed.')
 })
 
 notification_mapping = api.model('NotificationSettings', {
