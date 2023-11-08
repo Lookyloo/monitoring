@@ -27,11 +27,12 @@ cron-converter = "^1.0.2"
 bootstrap-flask = "^2.3.2"
 pylookyloo = "^1.22.1"
 flask-wtf = "^1.2.1"
-flask-login = "^0.6.2"
+flask-login = "^0.6.3"
+defang = "^0.5.3"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.6.1"
-types-redis = {version = "^4.6.0.7"}
+types-redis = {version = "^4.6.0.10"}
 types-requests = "^2.31.0.10"
 
 [tool.poetry.group.old]
