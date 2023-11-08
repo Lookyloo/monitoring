@@ -11,6 +11,7 @@ from logging import LoggerAdapter
 from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
 from cron_converter import Cron  # type: ignore
+from defang import defang  # type: ignore
 from pylookyloo import Lookyloo, CaptureSettings
 from requests.exceptions import ConnectionError
 from redis import ConnectionPool, Redis
@@ -452,7 +453,7 @@ class Monitoring():
         captured_url = capture_settings['url']
         email_config = get_config('generic', 'email')
         msg = EmailMessage()
-        msg['Subject'] = f"Monitoring notification for {captured_url} ({monitor_uuid})"
+        msg['Subject'] = f"Monitoring notification for {monitor_uuid}"
         msg['From'] = email_config['from']
         if isinstance(mail_to, str):
             msg['To'] = mail_to
@@ -465,7 +466,13 @@ class Monitoring():
                 if isinstance(compare_details['details'], (str, int)):
                     # no difference
                     continue
-                details += f'  * {compare_details["message"]} - Before: {compare_details["details"][0]} / After: {compare_details["details"][1]}\n'
+                before = compare_details["details"][0]
+                after = compare_details["details"][1]
+                # defang URLs to avoid seeing emails flagged as spam...
+                if compare_key in ['root_url', 'final_url', 'final_hostname']:
+                    before = defang(before)
+                    after = defang(after)
+                details += f'  * {compare_details["message"]} - Before: {before} / After: {after}\n'
             elif compare_key == 'redirects':
                 details += '  * Redirects:\n'
                 if not isinstance(compare_details['length']['details'], int):
@@ -475,16 +482,22 @@ class Monitoring():
                         if isinstance(node_details['details'], (str, int)):
                             # no difference
                             continue
-                        details += f'    * {node_details["message"]} - Before: {node_details["details"][0]} / After {node_details["details"][1]}\n'
+                        before = node_details["details"][0]
+                        after = node_details["details"][1]
+                        # defang URLs to avoid seeing emails flagged as spam...
+                        if node_key in ['url']:
+                            before = defang(before)
+                            after = defang(after)
+                        details += f'    * {node_details["message"]} - Before: {before} / After {after}\n'
 
             elif compare_key == 'ressources':
                 if compare_details.get('left'):
                     details += '  * Ressources only in old capture:\n'
-                    details += '\n    * '.join(compare_details['left'])
+                    details += '\n    * '.join(defang(url) for url in compare_details['left'])
                     details += '\n'
                 if compare_details.get('right'):
                     details += '  * Ressources only in new capture:\n'
-                    details += '\n    * '.join(compare_details['right'])
+                    details += '\n    * '.join(defang(url) for url in compare_details['right'])
                     details += '\n'
             else:
                 # unexpected key name
