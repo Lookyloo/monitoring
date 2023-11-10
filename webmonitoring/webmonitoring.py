@@ -450,7 +450,7 @@ class Monitoring():
     def prepare_notification_mail(self, mail_to: Union[str, List[str]], monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         capture_settings = self.get_capture_settings(monitor_uuid)
-        captured_url = capture_settings['url']
+        captured_url = defang(capture_settings['url'])
         email_config = get_config('generic', 'email')
         msg = EmailMessage()
         msg['Subject'] = f"Monitoring notification for {monitor_uuid}"
