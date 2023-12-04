@@ -21,18 +21,18 @@ run_captures = "bin.run_captures:main"
 python = "^3.10"
 redis = {version = "^5.0.1", extras = ["hiredis"]}
 flask-restx = "^1.2.0"
-werkzeug = "^2.3.7"
+werkzeug = "^2.3.8"
 gunicorn = "^21.2.0"
 cron-converter = "^1.0.2"
-bootstrap-flask = "^2.3.2"
-pylookyloo = "^1.22.1"
+bootstrap-flask = "^2.3.3"
+pylookyloo = "^1.22.2"
 flask-wtf = "^1.2.1"
 flask-login = "^0.6.3"
 defang = "^0.5.3"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.6.1"
-types-redis = {version = "^4.6.0.10"}
+mypy = "^1.7.1"
+types-redis = {version = "^4.6.0.11"}
 types-requests = "^2.31.0.10"
 
 [tool.poetry.group.old]
