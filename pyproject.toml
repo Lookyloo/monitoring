@@ -16,6 +16,7 @@ monitoring_queue_manager = "bin.monitoring_queue_manager:main"
 notification_manager = "bin.notification_manager:main"
 
 run_captures = "bin.run_captures:main"
+scripts_controller = "bin.scripts_controller:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -29,11 +30,13 @@ pylookyloo = "^1.25.0"
 flask-wtf = "^1.2.1"
 flask-login = "^0.6.3"
 defang = "^0.5.3"
+psutil = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.11.1"
-types-redis = {version = "^4.6.0.20240726"}
+types-redis = {version = "^4.6.0.20240806"}
 types-requests = "^2.32.0.20240712"
+types-psutil = "^6.0.0.20240621"
 
 [tool.poetry.group.old]
 optional = true
