@@ -341,15 +341,15 @@ class Monitoring():
                     if 'error' in capture_info:
                         continue
                     valid_captures.append(c[0])
-                first_capture = valid_captures[0]
-                second_capture = valid_captures[1]
+                first_capture = valid_captures[1]
+                second_capture = valid_captures[0]
             else:
-                first_capture = capture_uuids[0][0]
-                second_capture = capture_uuids[1][0]
+                first_capture = capture_uuids[1][0]
+                second_capture = capture_uuids[0][0]
             compare_result = self.lookyloo.compare_captures(first_capture, second_capture,
                                                             compare_settings=compare_settings)
         else:
-            compare_result = self.lookyloo.compare_captures(capture_uuids[0][0], capture_uuids[1][0])
+            compare_result = self.lookyloo.compare_captures(capture_uuids[1][0], capture_uuids[0][0])
         return compare_result
 
     def update_monitoring_queue(self):
