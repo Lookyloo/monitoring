@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import hashlib
+import json
 import os
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Union, List
@@ -29,6 +31,12 @@ def get_secret_key() -> bytes:
                 f.write(os.urandom(64))
     with secret_file_path.open('rb') as f:
         return f.read()
+
+
+@lru_cache(64)
+def sri_load() -> dict[str, dict[str, str]]:
+    with (get_homedir() / 'website' / 'web' / 'sri.txt').open() as f:
+        return json.load(f)
 
 
 class User(flask_login.UserMixin):

@@ -9,6 +9,9 @@
         {% block styles %}
             <!-- Bootstrap CSS -->
             {{ bootstrap.load_css() }}
+            <link rel="stylesheet" href='{{ url_for('static', filename='datatables.min.css') }}'
+                  {{get_sri('static', 'datatables.min.css')}}
+                  crossorigin="anonymous">
         {% endblock %}
 
         <title>{% block title %}{% endblock%}</title>
@@ -21,6 +24,12 @@
         {% block scripts %}
             <!-- Optional JavaScript -->
             {{ bootstrap.load_js() }}
+            <script src='{{ url_for('static', filename='jquery.min.js') }}'
+                    {{get_sri('static', 'jquery.min.js')}}
+                    crossorigin="anonymous"></script>
+            <script src='{{ url_for('static', filename='datatables.min.js') }}'
+                    {{get_sri('static', 'datatables.min.js')}}
+                    crossorigin="anonymous"></script>
         {% endblock %}
     </body>
 </html>

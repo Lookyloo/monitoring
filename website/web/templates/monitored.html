@@ -14,11 +14,35 @@
     document.getElementsByName("stop_monitoring")
         .forEach(form => form.addEventListener('submit', stop_method));
   </script>
+  <script type="text/javascript">
+$(document).ready(function () {
+  $('#table').DataTable( {
+    "order": [[ 3, "desc" ]],
+    "pageLength": 50,
+    "columnDefs": [
+      {
+        "targets": 2,
+        "render": function ( data, type, row, meta ) {
+            let date = new Date(data);
+            return date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, "0") + '-' + date.getDate().toString().padStart(2, "0") + ' ' + date.toTimeString();
+        }
+      },
+      {
+        "targets": 3,
+        "render": function ( data, type, row, meta ) {
+            let date = new Date(data);
+            return date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, "0") + '-' + date.getDate().toString().padStart(2, "0") + ' ' + date.toTimeString();
+        }
+      }
+    ]
+  } );
+});
+</script>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-  <table class="table">
+  <table class="table" id="table">
     <thead>
     <tr>
       <th scope="col">#</th>
@@ -34,13 +58,13 @@
     <tbody>
     {% for details in monitored_index %}
     <tr>
-      <th scope="row">
+      <td scope="row">
         {% if details['number_captures'] >= 2 %}
           <a href="{{ url_for('changes_tracking', monitor_uuid=details['uuid'])}}">{{details['uuid']}}</a>
         {% else %}
           {{details['uuid']}}
         {%endif%}
-      </th>
+      </td>
       <td>{{details['capture_settings']['url']}}</td>
       <td>
         {% if 'last_capture' in details %}

@@ -334,15 +334,23 @@ class Monitoring():
             raise CannotCompare(f'Only one capture, nothing to compare ({monitor_uuid})')
         # NOTE For now, only compare the last two captures, later we will compare more
         if compare_settings := self.get_compare_settings(monitor_uuid):
+            first_capture = ''
+            second_capture = ''
             if compare_settings.pop('skip_failed_captures', False):
-                valid_captures = []
                 for c in capture_uuids:
                     capture_info = self.lookyloo.get_info(c[0])
                     if 'error' in capture_info:
                         continue
-                    valid_captures.append(c[0])
-                first_capture = valid_captures[1]
-                second_capture = valid_captures[0]
+                    if not second_capture:
+                        # most recent
+                        second_capture = c[0]
+                    elif not first_capture:
+                        first_capture = c[0]
+                        break
+                else:
+                    # we dont have two valid captures to compare
+                    first_capture = capture_uuids[1][0]
+                    second_capture = capture_uuids[0][0]
             else:
                 first_capture = capture_uuids[1][0]
                 second_capture = capture_uuids[0][0]

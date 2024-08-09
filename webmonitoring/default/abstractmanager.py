@@ -27,7 +27,7 @@ class AbstractManager(ABC):
         self.logger = logging.getLogger(f'{self.__class__.__name__}')
         self.logger.setLevel(self.loglevel)
         self.logger.info(f'Initializing {self.__class__.__name__}')
-        self.process: Popen | None = None  # type: ignore[type-arg]
+        self.process: Popen | None = None
         self.__redis = Redis(unix_socket_path=get_socket_path('cache'), db=1, decode_responses=True)
 
         self.force_stop = False

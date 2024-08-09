@@ -1,0 +1,7 @@
+{
+  "static": {
+    "datatables.min.css": "JinDXH1mxd4x0cl6n73x4N/8DzhgjSqcQGOArL3GX8SOtGlAMDMwhseLWxm0LMKGWOUpVLxrQEWqPKULh9IblQ==",
+    "datatables.min.js": "MABPYjqr3jAC3KjoC8JDjEs6aIrQj/XgBCKj23nSq5U7jjFTDT8ohvPOIzMTkWXmpc1rNsZyCk6H90iyt6iPCg==",
+    "jquery.min.js": "v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+  }
+}

@@ -9,6 +9,7 @@
     "force_expire": true,
     "force_notification": "",
     "users": {},
+    "ignore_sri": false,
     "email": {
         "smtp_host": "localhost",
         "smtp_port": "25",
@@ -33,6 +34,7 @@
         "force_expire": "If true, the expiring time will be set to a maximum of the frequency (provded by the user, or min_frequency if higher) * the max amount of captures.",
         "force_notification": "If not empty string, it must be an email address. Every monitored entry will be sent there if there is a difference.",
         "users": "It is some kind of an admin accounts. Format: {username: password}",
+        "ignore_sri": "If true, the sri values are ignored and not calculated so that there are no problems while developing and testing.",
         "email": "Email configuration to send notifications",
         "email_smtp_auth": "Email SMTP auth configuration to send notifications"
     }

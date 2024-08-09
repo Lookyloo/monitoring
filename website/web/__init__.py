@@ -14,10 +14,11 @@ from flask_wtf import FlaskForm  # type: ignore
 from werkzeug.security import check_password_hash
 from wtforms import Form, SelectField, StringField, DateTimeLocalField, FieldList, FormField, EmailField, BooleanField, validators  # type: ignore
 
+from webmonitoring.default import get_config
 from webmonitoring.exceptions import CannotCompare, AlreadyExpired, AlreadyMonitored, UnknownUUID, InvalidSettings, TimeError
 from webmonitoring.webmonitoring import Monitoring, CompareSettings, NotificationSettings
 
-from .helpers import get_secret_key, build_users_table, User, load_user_from_request
+from .helpers import get_secret_key, build_users_table, User, load_user_from_request, sri_load
 from .proxied import ReverseProxied
 
 app: Flask = Flask(__name__)
@@ -34,6 +35,19 @@ app.debug = False
 # Auth stuff
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
+
+
+ignore_sri = get_config('generic', 'ignore_sri')
+
+
+def get_sri(directory: str, filename: str) -> str:
+    if ignore_sri:
+        return ""
+    sha512 = sri_load()[directory][filename]
+    return f'integrity=sha512-{sha512}'
+
+
+app.jinja_env.globals.update(get_sri=get_sri)
 
 
 @login_manager.user_loader
