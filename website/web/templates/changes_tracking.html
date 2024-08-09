@@ -28,61 +28,71 @@
     {%endif%}
   </ul>
 
-  <form method="POST" action="{{ url_for('changes_tracking', monitor_uuid=monitor_uuid)}}">
-    {{ monitoring_form.csrf_token }}
-    <div class="mb-3">
-      {{ monitoring_form.frequency.label(class="form-label") }}
-      <input class="form-control" list="freqOptions" type="text" id="frequency" name="frequency" value="{{monitoring_form.frequency.data}}">
-      <datalist id="freqOptions">
-        {{ monitoring_form.frequency(class="form-control form-control-sm") }}
-      </datalist>
-    </div>
-    <div class="mb-3">
-    {{ monitoring_form.expire_at.label(class="form-label") }} {{ monitoring_form.expire_at(class="form-control form-control-sm") }}
-    </div>
-    <div class="mb-3">
-    {{ monitoring_form.collection.label(class="form-label") }} {{ monitoring_form.collection(class="form-control form-control-sm") }}
-    </div>
-    <div class="mb-3">
-      {{ monitoring_form.compare_settings.ressources_ignore_domains.label(class="form-label") }}
-      <div>
-      {%for settings in monitoring_form.compare_settings.ressources_ignore_domains %}
-        {{ settings(class="form-control form-control-sm") }}
-      {%endfor%}
+  <p class="d-inline-flex gap-1">
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSettingsEdit"
+            aria-expanded="false" aria-controls="collapseSettingsEdit">
+      Edit monitoring settings
+    </button>
+  </p>
+  <div class="collapse" id="collapseSettingsEdit">
+   <div class="card card-body">
+    <form method="POST" action="{{ url_for('changes_tracking', monitor_uuid=monitor_uuid)}}">
+      {{ monitoring_form.csrf_token }}
+      <div class="mb-3">
+        {{ monitoring_form.frequency.label(class="form-label") }}
+        <input class="form-control" list="freqOptions" type="text" id="frequency" name="frequency" value="{{monitoring_form.frequency.data}}">
+        <datalist id="freqOptions">
+          {{ monitoring_form.frequency(class="form-control form-control-sm") }}
+        </datalist>
       </div>
-    </div>
-    <div class="mb-3">
-      {{ monitoring_form.compare_settings.ressources_ignore_regexes.label(class="form-label") }}
-      <div>
-      {%for settings in monitoring_form.compare_settings.ressources_ignore_regexes %}
-        {{ settings(class="form-control form-control-sm") }}
-      {%endfor%}
+      <div class="mb-3">
+      {{ monitoring_form.expire_at.label(class="form-label") }} {{ monitoring_form.expire_at(class="form-control form-control-sm") }}
       </div>
-    </div>
-    <div class="mb-3">
-      {{ monitoring_form.compare_settings.ignore_ips.label(class="form-label") }}
-      {{ monitoring_form.compare_settings.ignore_ips(class="form-check-input") }}
-    </div>
-    <div class="mb-3">
-      {{ monitoring_form.compare_settings.skip_failed_captures.label(class="form-label") }}
-      {{ monitoring_form.compare_settings.skip_failed_captures(class="form-check-input") }}
-    </div>
+      <div class="mb-3">
+      {{ monitoring_form.collection.label(class="form-label") }} {{ monitoring_form.collection(class="form-control form-control-sm") }}
+      </div>
+      <div class="mb-3">
+        {{ monitoring_form.compare_settings.ressources_ignore_domains.label(class="form-label") }}
+        <div>
+        {%for settings in monitoring_form.compare_settings.ressources_ignore_domains %}
+          {{ settings(class="form-control form-control-sm") }}
+        {%endfor%}
+        </div>
+      </div>
+      <div class="mb-3">
+        {{ monitoring_form.compare_settings.ressources_ignore_regexes.label(class="form-label") }}
+        <div>
+        {%for settings in monitoring_form.compare_settings.ressources_ignore_regexes %}
+          {{ settings(class="form-control form-control-sm") }}
+        {%endfor%}
+        </div>
+      </div>
+      <div class="mb-3">
+        {{ monitoring_form.compare_settings.ignore_ips.label(class="form-label") }}
+        {{ monitoring_form.compare_settings.ignore_ips(class="form-check-input") }}
+      </div>
+      <div class="mb-3">
+        {{ monitoring_form.compare_settings.skip_failed_captures.label(class="form-label") }}
+        {{ monitoring_form.compare_settings.skip_failed_captures(class="form-check-input") }}
+      </div>
 
-    {% if current_user.is_authenticated %}
-    <div class="mb-3">
-    {{ monitoring_form.notification.email.label(class="form-label") }}
-    {{ monitoring_form.notification.email(class="form-control form-control-sm") }}
-    </div>
-    {% endif %}
+      {% if current_user.is_authenticated %}
+      <div class="mb-3">
+      {{ monitoring_form.notification.email.label(class="form-label") }}
+      {{ monitoring_form.notification.email(class="form-control form-control-sm") }}
+      </div>
+      {% endif %}
 
-    {% if current_user.is_authenticated %}
-    <input type="submit" value="Update" class="btn btn-primary">
-    {%else%}
-    <div class="mb-3">
-        You must be authenticated to change the settings.
-    </div>
-    {% endif %}
-  </form>
+      {% if current_user.is_authenticated %}
+      <input type="submit" value="Update" class="btn btn-primary">
+      {%else%}
+      <div class="mb-3">
+          You must be authenticated to change the settings.
+      </div>
+      {% endif %}
+    </form>
+   </div>
+  </div>
 
   {% if 'lookyloo_urls' in changes%}
   <h4>Links to the captures on Lookyloo</h4>
