@@ -11,6 +11,7 @@ from logging import LoggerAdapter
 from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
 from cron_converter import Cron  # type: ignore
+import dateparser
 from defang import defang  # type: ignore
 from pylookyloo import Lookyloo, CaptureSettings
 from requests.exceptions import ConnectionError
@@ -267,14 +268,19 @@ class Monitoring():
             logger.info('Capture added to monitoring')
 
         if expire_at:
-            if isinstance(expire_at, (str, int, float)):
+            if isinstance(expire_at, str):
+                if dt_expire := dateparser.parse(expire_at):
+                    _expire = dt_expire.timestamp()
+            if isinstance(expire_at, (int, float)):
                 _expire = float(expire_at)
             if isinstance(expire_at, datetime):
                 _expire = expire_at.timestamp()
-            if _expire < datetime.now().timestamp():
-                # The expiration time is in the past.
-                raise TimeError('Expiration time in the past.')
-            p.set(f'{monitor_uuid}:expire', _expire)
+
+            if _expire:
+                if _expire < datetime.now().timestamp():
+                    # The expiration time is in the past.
+                    raise TimeError('Expiration time in the past.')
+                p.set(f'{monitor_uuid}:expire', _expire)
 
         if compare_settings:
             _compare_settings = for_redis(compare_settings)
