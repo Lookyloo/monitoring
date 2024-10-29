@@ -28,12 +28,18 @@ jobs:
         poetry install
         echo WEBMONITORING_HOME=`pwd` > .env
 
-    - name: Install redis
+    - name: Clone Valkey
+      uses: actions/checkout@v4
+      with:
+        repository: valkey-io/valey
+        path: valkey-tmp
+        ref: '8.0'
+
+    - name: Install and setup valkey
       run: |
+        mv valkey-tmp ../valkey
         pushd ..
-        git clone https://github.com/antirez/redis.git
-        pushd redis
-        git checkout 7.0
+        pushd valkey
         make
         popd
         popd
