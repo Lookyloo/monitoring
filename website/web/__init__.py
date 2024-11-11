@@ -110,6 +110,9 @@ def index():
 @app.route('/collections', methods=['GET'])
 def collections():
     collections = monitoring.get_collections()
+    if not flask_login.current_user.is_authenticated:
+        # strip collections that are too long (unless you're logged in)
+        collections = [c for c in collections if len(c) < 30]
     return render_template('collections.html', collections=collections)
 
 
