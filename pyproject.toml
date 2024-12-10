@@ -46,7 +46,7 @@ optional = true
 [tool.poetry.group.old.dependencies]
 plotly = "^5.14.0"
 jupyter-dash = "^0.4.2"
-jupyterlab = "^4.2.5"
+jupyterlab = "^4.3.3"
 pandas = "^2.2.3"
 
 [build-system]
