@@ -207,7 +207,7 @@ class Monitoring():
     def monitor(self, *, capture_settings: CaptureSettings, frequency: str,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
-
+                never_expire: bool=False,
                 notification: Optional[NotificationSettings]=None) -> str:
         """Start a new monitoring with individual parameters"""
         ...

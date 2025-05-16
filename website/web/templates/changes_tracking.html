@@ -76,8 +76,8 @@
         {{ monitoring_form.compare_settings.skip_failed_captures(class="form-check-input") }}
       </div>
       <div class="mb-3">
-        {{ monitoring_form.compare_settings.never_expire.label(class="form-label") }}
-        {{ monitoring_form.compare_settings.never_expire(class="form-check-input") }}
+        {{ monitoring_form.never_expire.label(class="form-label") }}
+        {{ monitoring_form.never_expire(class="form-check-input") }}
       </div>
 
       {% if current_user.is_authenticated %}

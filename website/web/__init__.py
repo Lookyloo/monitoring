@@ -143,7 +143,6 @@ class CompareSettingsForm(Form):
     ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
     ignore_ips = BooleanField(label='Ignore IPs in comparison', description='Avoid flagging two captures are different when served on CDNs.')
     skip_failed_captures = BooleanField(label='Skip failed captures', description='Avoid attempting to compare two captures when one of them failed.')
-    never_expire = BooleanField(label='Never expire', description='Do not auto-expire the monitoring.')
 
 
 class NotificationForm(Form):
@@ -154,6 +153,7 @@ class MonitoringForm(FlaskForm):
     frequency = SelectField(label='Capture frequency', choices=[('daily', 'Daily'), ('hourly', 'Hourly')], validators=[validators.input_required()])
     expire_at = DateTimeLocalField('Expire monitoring at', validators=[validators.Optional()])
     collection = StringField('Collection of the monitored URL')
+    never_expire = BooleanField(label='Never expire the monitoring', description='Avoid expiring the monitoring after a certain amount of captures.')
     compare_settings = FormField(CompareSettingsForm)
     notification = FormField(NotificationForm)
 
@@ -172,7 +172,7 @@ def changes_tracking(monitor_uuid: str):
                     if values := form.compare_settings.data[k]:
                         # Empty list is fine, it is how we remove all entries
                         compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
-                elif k in ['ignore_ips', 'skip_failed_captures', 'never_expire']:
+                elif k in ['ignore_ips', 'skip_failed_captures']:
                     compare_settings[k] = bool(form.compare_settings.data[k])  # type: ignore
 
             notification: NotificationSettings = {}
@@ -183,6 +183,7 @@ def changes_tracking(monitor_uuid: str):
                     monitor_uuid=monitor_uuid,
                     frequency=form.frequency.data if form.frequency.data else None,
                     expire_at=form.expire_at.data if form.expire_at.data else None,
+                    never_expire=True if form.never_expire.data else False,
                     collection=form.collection.data if form.collection.data else None,
                     compare_settings=compare_settings if compare_settings else None,
                     notification=notification if notification else None
@@ -281,7 +282,6 @@ compare_settings_mapping = api.model('CompareSettings', {
     'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL")),
     'ignore_ips': fields.Boolean(False, description='Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.'),
     'skip_failed_captures': fields.Boolean(False, description='Skip failed captures. Avoid attempting to compare two captures when one of them failed.'),
-    'never_expire': fields.Boolean(label='Never expire the monitoring', description='Allows to keep the monitoring going forever.')
 })
 
 notification_mapping = api.model('NotificationSettings', {
@@ -292,6 +292,7 @@ monitor_fields_post = api.model('MonitorFieldsPost', {
     'capture_settings': fields.Nested(capture_settings_mapping, description="The capture settings"),
     'frequency': fields.String('The frequency of the capture'),
     'expire_at': fields.String('When the monitoring expires, empty means never'),
+    'never_expire': fields.Boolean(label='Never expire the monitoring', description='Allows to keep the monitoring going forever.'),
     'collection': fields.String('The name of the collection'),
     'compare_settings': fields.Nested(compare_settings_mapping, description="The settings to compare captures."),
     'notification': fields.Nested(notification_mapping, description="The notification settings.")
@@ -308,6 +309,7 @@ class Monitor(Resource):
         monitor_uuid = monitoring.monitor(capture_settings=monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'),
                                           compare_settings=monit.get('compare_settings'),
+                                          never_expire=monit.get('never_expire', False),
                                           notification=monit.get('notification'))
         return monitor_uuid
 
@@ -341,6 +343,7 @@ class UpdateMonitor(Resource):
                                               expire_at=monit.get('expire_at'),
                                               collection=monit.get('collection'),
                                               compare_settings=monit.get('compare_settings'),
+                                              never_expire=monit.get('never_expire', False),
                                               notification=monit.get('notification'))
             return monitor_uuid
         except (UnknownUUID, InvalidSettings, TimeError) as e:
