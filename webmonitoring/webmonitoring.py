@@ -177,7 +177,7 @@ class Monitoring():
                 to_return['expire_at'] = expire_at
         if collection := self.redis.get(f'{monitor_uuid}:collection'):
             to_return['collection'] = collection
-        if never_expire := self.redis.exists(f'{monitor_uuid}:ever_expire'):
+        if never_expire := self.redis.exists(f'{monitor_uuid}:never_expire'):
             to_return['never_expire'] = never_expire
         if compare_settings := self.get_compare_settings(monitor_uuid):
             to_return['compare_settings'] = compare_settings
