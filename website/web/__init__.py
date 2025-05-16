@@ -143,6 +143,7 @@ class CompareSettingsForm(Form):
     ressources_ignore_regexes = FieldList(StringField('Regex'), label="Regexes in URLs to ignore in comparison", min_entries=5)
     ignore_ips = BooleanField(label='Ignore IPs in comparison', description='Avoid flagging two captures are different when served on CDNs.')
     skip_failed_captures = BooleanField(label='Skip failed captures', description='Avoid attempting to compare two captures when one of them failed.')
+    never_expire = BooleanField(label='Never expire', description='Do not auto-expire the monitoring.')
 
 
 class NotificationForm(Form):
@@ -171,7 +172,7 @@ def changes_tracking(monitor_uuid: str):
                     if values := form.compare_settings.data[k]:
                         # Empty list is fine, it is how we remove all entries
                         compare_settings[k] = [x for x in set(values) if x != '']  # type: ignore
-                elif k in ['ignore_ips', 'skip_failed_captures']:
+                elif k in ['ignore_ips', 'skip_failed_captures', 'never_expire']:
                     compare_settings[k] = bool(form.compare_settings.data[k])  # type: ignore
 
             notification: NotificationSettings = {}
@@ -279,7 +280,8 @@ compare_settings_mapping = api.model('CompareSettings', {
     'ressources_ignore_domains': fields.List(fields.String(description="A domain to ignore")),
     'ressources_ignore_regexes': fields.List(fields.String(description="A regex to match anything in a URL")),
     'ignore_ips': fields.Boolean(False, description='Ignore IPs when comparing nodes. Avoid flagging two captures are different when served on CDNs.'),
-    'skip_failed_captures': fields.Boolean(False, description='Skip failed captures. Avoid attempting to compare two captures when one of them failed.')
+    'skip_failed_captures': fields.Boolean(False, description='Skip failed captures. Avoid attempting to compare two captures when one of them failed.'),
+    'never_expire': fields.Boolean(label='Never expire the monitoring', description='Allows to keep the monitoring going forever.')
 })
 
 notification_mapping = api.model('NotificationSettings', {

@@ -44,6 +44,7 @@ class NotificationSettings(TypedDict, total=False):
 class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
+    never_expire: bool
     expire_at: Optional[Union[str, datetime, float]]
     collection: Optional[str]
     compare_settings: Optional[CompareSettings]
@@ -176,6 +177,8 @@ class Monitoring():
                 to_return['expire_at'] = expire_at
         if collection := self.redis.get(f'{monitor_uuid}:collection'):
             to_return['collection'] = collection
+        if never_expire := self.redis.exists(f'{monitor_uuid}:ever_expire'):
+            to_return['never_expire'] = never_expire
         if compare_settings := self.get_compare_settings(monitor_uuid):
             to_return['compare_settings'] = compare_settings
         if notification := self.redis.hgetall(f'{monitor_uuid}:notification'):
@@ -213,7 +216,9 @@ class Monitoring():
     def monitor(self, *, monitor_uuid: str, capture_settings: Optional[CaptureSettings]=None,
                 frequency: Optional[str]=None,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
+                collection: Optional[str]=None,
+                never_expire: bool=False,
+                compare_settings: Optional[CompareSettings]=None,
                 notification: Optional[NotificationSettings]=None) -> str:
         """Update an existing monitoring with individual parameters"""
         ...
@@ -222,6 +227,7 @@ class Monitoring():
                 frequency: Optional[str]=None,
                 expire_at: Optional[Union[datetime, str, int, float]]=None,
                 collection: Optional[str]=None,
+                never_expire: bool=False,
                 compare_settings: Optional[CompareSettings]=None,
                 notification: Optional[NotificationSettings]=None,
                 monitor_settings: Optional[MonitorSettings]=None,
@@ -241,6 +247,7 @@ class Monitoring():
             frequency = monitor_settings.get('frequency')
             expire_at = monitor_settings.get('expire_at')
             collection = monitor_settings.get('collection')
+            never_expire = monitor_settings.get('never_expire', False)
             compare_settings = monitor_settings.get('compare_settings')
             notification = monitor_settings.get('notification')
 
@@ -256,6 +263,9 @@ class Monitoring():
             p.hset(f'{monitor_uuid}:capture_settings', mapping=for_redis(capture_settings))
         if frequency:
             p.set(f'{monitor_uuid}:frequency', frequency.lower())
+
+        if never_expire:
+            p.set(f'{monitor_uuid}:never_expire', 1)
 
         if collection:
             p.set(f'{monitor_uuid}:collection', collection)
@@ -386,7 +396,9 @@ class Monitoring():
                     nb_restarts = 1
                 else:
                     nb_restarts = int(_nb_restarts) + 1
-                if self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures * nb_restarts:
+                # if the capture is marked as "never_expire" (admin only), skip that.
+                if (not self.redis.exists(f'{monitor_uuid}:never_expire')
+                        and self.redis.zcard(f'{monitor_uuid}:captures') > self.max_captures * nb_restarts):
                     # Force expire monitoring
                     self.redis.smove('monitored', 'expired', monitor_uuid)
                     logger.info('Maximum amount of captures reached, expire..')
