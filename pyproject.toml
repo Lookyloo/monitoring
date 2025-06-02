@@ -38,7 +38,7 @@ mypy = "^1.15.0"
 types-redis = {version = "^4.6.0.20241004"}
 types-requests = "^2.32.0.20250515"
 types-psutil = "^7.0.0.20250516"
-types-dateparser = "^1.2.0.20250516"
+types-dateparser = "^1.2.0.20250601"
 
 [tool.poetry.group.old]
 optional = true
