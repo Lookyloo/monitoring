@@ -34,7 +34,7 @@ psutil = "^7.0.0"
 dateparser = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.16.0"
+mypy = "^1.16.1"
 types-redis = {version = "^4.6.0.20241004"}
 types-requests = "^2.32.0.20250602"
 types-psutil = "^7.0.0.20250601"
