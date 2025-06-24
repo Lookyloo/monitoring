@@ -2417,14 +2417,14 @@ tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
 name = "pylookyloo"
-version = "1.31.0"
+version = "1.31.1"
 description = "Python CLI and module for Lookyloo"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pylookyloo-1.31.0-py3-none-any.whl", hash = "sha256:3be671975a31392671848e10b779ec5d8cfe14eb9fc55dc01f298e8efb66102f"},
-    {file = "pylookyloo-1.31.0.tar.gz", hash = "sha256:af7f07751c7aea9e3a150c1ed09745284afb641b2241ca1b30e605365ae3dcbd"},
+    {file = "pylookyloo-1.31.1-py3-none-any.whl", hash = "sha256:1f3bef9efa442a96cb4ad0f2558f2632e54d22e88f91b4cfc8af4e39bd5bf092"},
+    {file = "pylookyloo-1.31.1.tar.gz", hash = "sha256:c6d8f637126badda9a3d2b97796eb960bd20433f53179b10afe48cea9d7d1d19"},
 ]
 
 [package.dependencies]
@@ -3504,4 +3504,4 @@ email = ["email-validator"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "c4e2c851ce644ea0a74c3cb8346b74a7dd45425c7810b619faf953ca5db0180a"
+content-hash = "dfda204cd54cec241f9849b3145af46d8a5ee7a55ff7d97f49c86f785ac12fc7"
