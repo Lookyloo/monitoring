@@ -44,7 +44,7 @@ types-dateparser = "^1.2.0.20250601"
 optional = true
 
 [tool.poetry.group.old.dependencies]
-plotly = "^6.1.2"
+plotly = "^6.2.0"
 jupyter-dash = "^0.4.2"
 jupyterlab = "^4.2.5"
 pandas = "^2.2.3"
