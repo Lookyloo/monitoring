@@ -24,21 +24,21 @@ redis = {version = "^5.3.0,<6.0", extras = ["hiredis"]}
 flask-restx = "^1.3.0"
 werkzeug = "^3.1.3"
 gunicorn = "^23.0.0"
-cron-converter = "^1.2.1"
+cron-converter = "^1.2.2"
 bootstrap-flask = "^2.5.0"
-pylookyloo = "^1.31.0"
+pylookyloo = "^1.31.2"
 flask-wtf = "^1.2.2"
 flask-login = "^0.6.3"
 defang = "^0.5.3"
 psutil = "^7.0.0"
-dateparser = "^1.2.1"
+dateparser = "^1.2.2"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.16.1"
+mypy = "^1.17.1"
 types-redis = {version = "^4.6.0.20241004"}
-types-requests = "^2.32.4.20250611"
-types-psutil = "^7.0.0.20250601"
-types-dateparser = "^1.2.0.20250601"
+types-requests = "^2.32.4.20250809"
+types-psutil = "^7.0.0.20250801"
+types-dateparser = "^1.2.2.20250809"
 
 [tool.poetry.group.old]
 optional = true

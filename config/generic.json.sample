@@ -4,7 +4,7 @@
     "website_listen_port": 5200,
     "systemd_service_name": "webmonitoring",
     "lookyloo_url": "http://127.0.0.1:5100",
-    "min_frequency": 3000,
+    "min_frequency": 30,
     "max_captures": 10,
     "force_expire": true,
     "force_notification": "",
