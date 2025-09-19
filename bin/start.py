@@ -14,15 +14,15 @@ def main():
     print('done.')
 
     print('Start queue manager...')
-    # Popen(['monitoring_queue_manager'])
+    Popen(['monitoring_queue_manager'])
     print('done.')
 
     print('Start notification manager...')
-    # Popen(['notification_manager'])
+    Popen(['notification_manager'])
     print('done.')
 
     print('Start website...')
-    # Popen(['start_website'])
+    Popen(['start_website'])
     print('done.')
 
 
