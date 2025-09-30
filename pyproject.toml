@@ -47,7 +47,7 @@ optional = true
 plotly = "^6.1.2"
 jupyter-dash = "^0.4.2"
 jupyterlab = "^4.2.5"
-pandas = "^2.2.3"
+pandas = "^2.3.3"
 
 [build-system]
 requires = ["poetry-core"]
