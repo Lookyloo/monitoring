@@ -19,7 +19,7 @@ jobs:
     name: Python ${{ matrix.python-version }} sample
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
@@ -32,7 +32,7 @@ jobs:
         echo WEBMONITORING_HOME=`pwd` > .env
 
     - name: Clone Valkey
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         repository: valkey-io/valkey
         path: valkey-tmp
