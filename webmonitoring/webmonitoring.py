@@ -10,7 +10,7 @@ from email.message import EmailMessage
 from logging import LoggerAdapter
 from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
 
-from cron_converter import Cron  # type: ignore
+from cron_converter import Cron
 import dateparser
 from defang import defang  # type: ignore
 from pylookyloo import Lookyloo, CaptureSettings
