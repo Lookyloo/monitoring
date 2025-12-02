@@ -22,7 +22,7 @@ scripts_controller = "bin.scripts_controller:main"
 python = "^3.10"
 redis = {version = "^5.3.0,<6.0", extras = ["hiredis"]}
 flask-restx = "^1.3.2"
-werkzeug = "^3.1.3"
+werkzeug = "^3.1.4"
 gunicorn = "^23.0.0"
 cron-converter = "^1.3.0"
 bootstrap-flask = "^2.5.0"
@@ -34,10 +34,10 @@ psutil = "^7.1.3"
 dateparser = "^1.2.2"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.18.2"
+mypy = "^1.19.0"
 types-redis = {version = "^4.6.0.20241004"}
 types-requests = "^2.32.4.20250913"
-types-psutil = "^7.1.3.20251125"
+types-psutil = "^7.1.3.20251202"
 types-dateparser = "^1.2.2.20250809"
 
 [tool.poetry.group.old]
