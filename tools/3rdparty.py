@@ -5,7 +5,7 @@ import requests
 from webmonitoring.default import get_homedir
 
 jquery_version = "3.7.1"
-datatables_version = "2.1.3"
+datatables_version = "2.3.7"
 
 if __name__ == '__main__':
     dest_dir = get_homedir() / 'website' / 'web' / 'static'
