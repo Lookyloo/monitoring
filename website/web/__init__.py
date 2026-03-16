@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import json
 
 from datetime import datetime
@@ -116,7 +118,7 @@ def collections():
     return render_template('collections.html', collections=collections)
 
 
-def _index(index_type: str, collection: Optional[str]):
+def _index(index_type: str, collection: str | None):
     if index_type == 'monitored':
         to_index = monitoring.get_monitored_entries(collection=collection)
     elif index_type == 'expired':
@@ -128,13 +130,13 @@ def _index(index_type: str, collection: Optional[str]):
 
 @app.route('/monitored', methods=['GET'])
 @app.route('/monitored/<string:collection>', methods=['GET'])
-def monitored(collection: Optional[str]=None):
+def monitored(collection: str | None=None):
     return _index('monitored', collection)
 
 
 @app.route('/expired', methods=['GET'])
 @app.route('/expired/<string:collection>', methods=['GET'])
-def expired(collection: Optional[str]=None):
+def expired(collection: str | None=None):
     return _index('expired', collection)
 
 
@@ -249,15 +251,15 @@ class AuthToken(Resource):
     @api.param('username', 'Your username')
     @api.param('password', 'Your password')
     def get(self):
-        username: Optional[str] = request.args['username'] if request.args.get('username') else None
-        password: Optional[str] = request.args['password'] if request.args.get('password') else None
+        username: str | None = request.args['username'] if request.args.get('username') else None
+        password: str | None = request.args['password'] if request.args.get('password') else None
         if username and password and username in self.users_table and check_password_hash(self.users_table[username]['password'], password):
             return {'authkey': self.users_table[username]['authkey']}
         return {'error': 'User/Password invalid.'}, 401
 
     @api.doc(body=token_request_fields)
     def post(self):
-        auth: Dict = request.get_json(force=True)
+        auth: dict = request.get_json(force=True)
         if 'username' in auth and 'password' in auth:  # Expected keys in json
             if (auth['username'] in self.users_table
                     and check_password_hash(self.users_table[auth['username']]['password'], auth['password'])):
@@ -305,7 +307,7 @@ class Monitor(Resource):
 
     @api.doc(body=monitor_fields_post)
     def post(self):
-        monit: Dict[str, Any] = request.get_json(force=True)
+        monit: dict[str, Any] = request.get_json(force=True)
         monitor_uuid = monitoring.monitor(capture_settings=monit['capture_settings'], frequency=monit['frequency'],
                                           expire_at=monit.get('expire_at'), collection=monit.get('collection'),
                                           compare_settings=monit.get('compare_settings'),
@@ -335,7 +337,7 @@ class UpdateMonitor(Resource):
 
     @api.doc(body=monitor_fields_post)
     def post(self, monitor_uuid: str):
-        monit: Dict[str, Any] = request.get_json(force=True)
+        monit: dict[str, Any] = request.get_json(force=True)
         try:
             monitor_uuid = monitoring.monitor(monitor_uuid=monitor_uuid,
                                               capture_settings=monit.get('capture_settings'),
@@ -415,7 +417,7 @@ monitor_field_response = api.model('MonitorFieldResponse', {
 class JsonMonitored(Resource):
 
     @api.marshal_with(monitor_field_response, skip_none=True)
-    def get(self, collection: Optional[str]=None):
+    def get(self, collection: str | None=None):
         return monitoring.get_monitored_entries(collection)
 
 
@@ -427,7 +429,7 @@ class JsonMonitored(Resource):
 class JsonExpired(Resource):
 
     @api.marshal_with(monitor_field_response, skip_none=True)
-    def get(self, collection: Optional[str]=None):
+    def get(self, collection: str | None=None):
         return monitoring.get_expired_entries(collection)
 
 

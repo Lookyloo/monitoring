@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import json
 import logging
 
@@ -8,7 +10,8 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 from logging import LoggerAdapter
-from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, MutableMapping, overload, Mapping
+from typing import Any, Optional, Union, List, Dict, Tuple, TypedDict, overload
+from collections.abc import MutableMapping, Mapping
 
 from cron_converter import Cron
 import dateparser
@@ -27,12 +30,12 @@ from .mail import Mail
 class CompareSettings(TypedDict, total=False):
     '''The settings that can be passed to the compare method on lookyloo side to filter out some differences'''
 
-    ressources_ignore_domains: Optional[List[str]]
-    ressources_ignore_regexes: Optional[List[str]]
+    ressources_ignore_domains: list[str] | None
+    ressources_ignore_regexes: list[str] | None
 
-    ignore_ips: Optional[bool]
+    ignore_ips: bool | None
 
-    skip_failed_captures: Optional[bool]
+    skip_failed_captures: bool | None
 
 
 class NotificationSettings(TypedDict, total=False):
@@ -45,13 +48,13 @@ class MonitorSettings(TypedDict, total=False):
     capture_settings: CaptureSettings
     frequency: str
     never_expire: bool
-    expire_at: Optional[Union[str, datetime, float]]
-    collection: Optional[str]
-    compare_settings: Optional[CompareSettings]
-    notification: Optional[NotificationSettings]
+    expire_at: str | datetime | float | None
+    collection: str | None
+    compare_settings: CompareSettings | None
+    notification: NotificationSettings | None
 
     # This UUID is used when we trigger an update on the settings
-    monitor_uuid: Optional[str]
+    monitor_uuid: str | None
 
 
 class MonitoringInstanceSettings(TypedDict):
@@ -60,10 +63,10 @@ class MonitoringInstanceSettings(TypedDict):
     force_expire: bool
 
 
-def for_redis(data: Optional[Mapping]) -> Optional[Dict[str, Union[int, str, float]]]:
+def for_redis(data: Mapping | None) -> dict[str, int | str | float] | None:
     if not data:
         return None
-    mapping_capture: Dict[str, Union[float, int, str]] = {}
+    mapping_capture: dict[str, float | int | str] = {}
     for key, value in data.items():
         if value in [None, '']:
             continue
@@ -83,9 +86,9 @@ class MonitoringLogAdapter(LoggerAdapter):
     """
     Prepend log entry with the UUID of the monitoring
     """
-    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> Tuple[str, MutableMapping[str, Any]]:
+    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> tuple[str, MutableMapping[str, Any]]:
         if self.extra:
-            return '[%s] %s' % (self.extra['uuid'], msg), kwargs
+            return '[{}] {}'.format(self.extra['uuid'], msg), kwargs
         return msg, kwargs
 
 
@@ -116,7 +119,7 @@ class Monitoring():
         self.min_frequency = int(get_config('generic', 'min_frequency'))
         self.max_captures = int(get_config('generic', 'max_captures'))
         self.force_expire = get_config('generic', 'force_expire')
-        self.force_notification: Optional[NotificationSettings] = {'email': get_config('generic', 'force_notification')}
+        self.force_notification: NotificationSettings | None = {'email': get_config('generic', 'force_notification')}
 
     @property
     def redis(self):
@@ -134,13 +137,13 @@ class Monitoring():
     def get_collections(self):
         return self.redis.smembers('collections')
 
-    def get_expired_entries(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_expired_entries(self, collection: str | None=None) -> list[dict[str, Any]]:
         return self._get_index('expired', collection)
 
-    def get_monitored_entries(self, collection: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_monitored_entries(self, collection: str | None=None) -> list[dict[str, Any]]:
         return self._get_index('monitored', collection)
 
-    def _get_index(self, key: str, collection: Optional[str]) -> List[Dict[str, Any]]:
+    def _get_index(self, key: str, collection: str | None) -> list[dict[str, Any]]:
         to_return = []
         for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
@@ -149,8 +152,8 @@ class Monitoring():
             to_return.append(details)
         return to_return
 
-    def get_monitored_details(self, monitor_uuid: str) -> Dict[str, Any]:
-        to_return: Dict[str, Any] = {'uuid': monitor_uuid}
+    def get_monitored_details(self, monitor_uuid: str) -> dict[str, Any]:
+        to_return: dict[str, Any] = {'uuid': monitor_uuid}
         to_return['capture_settings'] = self.get_capture_settings(monitor_uuid)
         try:
             to_return['next_capture'] = self.get_next_capture(monitor_uuid)
@@ -205,33 +208,33 @@ class Monitoring():
 
     @overload
     def monitor(self, *, capture_settings: CaptureSettings, frequency: str,
-                expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None, compare_settings: Optional[CompareSettings]=None,
+                expire_at: datetime | str | int | float | None=None,
+                collection: str | None=None, compare_settings: CompareSettings | None=None,
                 never_expire: bool=False,
-                notification: Optional[NotificationSettings]=None) -> str:
+                notification: NotificationSettings | None=None) -> str:
         """Start a new monitoring with individual parameters"""
         ...
 
     @overload
-    def monitor(self, *, monitor_uuid: str, capture_settings: Optional[CaptureSettings]=None,
-                frequency: Optional[str]=None,
-                expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None,
+    def monitor(self, *, monitor_uuid: str, capture_settings: CaptureSettings | None=None,
+                frequency: str | None=None,
+                expire_at: datetime | str | int | float | None=None,
+                collection: str | None=None,
                 never_expire: bool=False,
-                compare_settings: Optional[CompareSettings]=None,
-                notification: Optional[NotificationSettings]=None) -> str:
+                compare_settings: CompareSettings | None=None,
+                notification: NotificationSettings | None=None) -> str:
         """Update an existing monitoring with individual parameters"""
         ...
 
-    def monitor(self, *, capture_settings: Optional[CaptureSettings]=None,
-                frequency: Optional[str]=None,
-                expire_at: Optional[Union[datetime, str, int, float]]=None,
-                collection: Optional[str]=None,
+    def monitor(self, *, capture_settings: CaptureSettings | None=None,
+                frequency: str | None=None,
+                expire_at: datetime | str | int | float | None=None,
+                collection: str | None=None,
                 never_expire: bool=False,
-                compare_settings: Optional[CompareSettings]=None,
-                notification: Optional[NotificationSettings]=None,
-                monitor_settings: Optional[MonitorSettings]=None,
-                monitor_uuid: Optional[str]=None) -> str:
+                compare_settings: CompareSettings | None=None,
+                notification: NotificationSettings | None=None,
+                monitor_settings: MonitorSettings | None=None,
+                monitor_uuid: str | None=None) -> str:
         is_update = False
         if monitor_uuid:
             if (self.redis.sismember('monitored', monitor_uuid)
@@ -341,7 +344,7 @@ class Monitoring():
         p.execute()
         return True
 
-    def compare_captures(self, monitor_uuid: str) -> Dict[str, Any]:
+    def compare_captures(self, monitor_uuid: str) -> dict[str, Any]:
         if not self.redis.exists(f'{monitor_uuid}:captures'):
             raise CannotCompare(f'No captures available for {monitor_uuid}')
         # Get all the capture UUIDs from most recent to oldest
@@ -473,7 +476,7 @@ class Monitoring():
             else:
                 logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
 
-    def prepare_notification_mail(self, mail_to: Union[str, List[str]], monitor_uuid: str, comparison_results: Dict[str, Any]) -> EmailMessage:
+    def prepare_notification_mail(self, mail_to: str | list[str], monitor_uuid: str, comparison_results: dict[str, Any]) -> EmailMessage:
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         capture_settings = self.get_capture_settings(monitor_uuid)
         captured_url = defang(capture_settings['url'])
@@ -547,7 +550,7 @@ class Monitoring():
     def notify(self, monitor_uuid: str):
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         notification_settings: NotificationSettings = self.redis.hgetall(f'{monitor_uuid}:notification')
-        emails_to_notify: List[str] = []
+        emails_to_notify: list[str] = []
         if notification_settings:
             if notification_settings.get('email'):
                 emails_to_notify.append(notification_settings['email'])
