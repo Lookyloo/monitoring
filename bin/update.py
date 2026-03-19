@@ -10,19 +10,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-from webmonitoring.default import get_homedir, get_config
+try:
+    from webmonitoring.default import get_homedir, get_config
+except ImportError as e:
+    print(f'Unable to run the update script, it is probably due to a missing dependency: {e}')
+    print('Please run "poetry install" and try again.')
+    sys.exit()
+
 
 logging.config.dictConfig(get_config('logging'))
 
 
-def compute_hash_self():
+def compute_hash_self() -> bytes:
     m = hashlib.sha256()
     with (get_homedir() / 'bin' / 'update.py').open('rb') as f:
         m.update(f.read())
         return m.digest()
 
 
-def keep_going(ignore=False):
+def keep_going(ignore: bool=False) -> None:
     if ignore:
         return
     keep_going = input('Continue? (y/N) ')
@@ -31,7 +37,7 @@ def keep_going(ignore=False):
         sys.exit()
 
 
-def run_command(command, expect_fail: bool=False, capture_output: bool=True):
+def run_command(command: str, expect_fail: bool=False, capture_output: bool=True) -> None:
     args = shlex.split(command)
     homedir = get_homedir()
     process = subprocess.run(args, cwd=homedir, capture_output=capture_output)
@@ -42,7 +48,7 @@ def run_command(command, expect_fail: bool=False, capture_output: bool=True):
         sys.exit()
 
 
-def check_poetry_version():
+def check_poetry_version() -> None:
     args = shlex.split("poetry self -V")
     homedir = get_homedir()
     process = subprocess.run(args, cwd=homedir, capture_output=True)
@@ -50,15 +56,16 @@ def check_poetry_version():
     version = poetry_version_str.split()[2]
     version = version.strip(')')
     version_details = tuple(int(i) for i in version.split('.'))
-    if version_details < (1, 2, 0):
-        print('The project requires poetry >= 1.1.0, please update.')
+    if version_details < (2, 0, 0):
+        print('Lookyloo requires poetry >= 2.0.0, please update.')
         print('If you installed with "pip install --user poetry", run "pip install --user -U poetry"')
         print('If you installed via the recommended method, use "poetry self update"')
+        print('If you installed via pipx, use "pipx autoupdate"')
         print('More details: https://github.com/python-poetry/poetry#updating-poetry')
         sys.exit()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Pull latest release, update dependencies, update and validate the config files, update 3rd deps for the website.')
     parser.add_argument('--yes', default=False, action='store_true', help='Run all commands without asking.')
     parser.add_argument('--init', default=False, action='store_true', help='Run all commands without starting the service.')
@@ -66,10 +73,14 @@ def main():
 
     old_hash = compute_hash_self()
 
+    print('* Lookyloo requires valkey 8.0 or more recent. If you are updating from an existing instance, make sure to update/migrate to valkey 8.0.')
+    print('* If you do not do that, restarting will not work but you will not loose anything, just need to install valkey 8.0.')
+    print('* Installing valkey 8.0 simply means cloning valkey, and runnig make.')
+    keep_going(args.yes or args.init)
+
     print('* Update repository.')
     keep_going(args.yes or args.init)
-    run_command('git submodule init')
-    run_command('git pull --recurse-submodules')
+    run_command('git pull')
     new_hash = compute_hash_self()
     if old_hash != new_hash:
         print('Update script changed, please do "poetry run update"')
@@ -94,26 +105,26 @@ def main():
     run_command(f'poetry run {(Path("tools") / "3rdparty.py").as_posix()}')
 
     if not args.init:
-        print('* Restarting')
+        print('* Restarting Lookyloo.')
         keep_going(args.yes)
         if platform.system() == 'Windows':
-            print('Restarting with poetry...')
+            print('Restarting Lookyloo with poetry...')
             run_command('poetry run stop', expect_fail=True)
             run_command('poetry run start', capture_output=False)
-            print('Started.')
+            print('Lookyloo started.')
         else:
-            service = get_config('generic', 'systemd_service_name')
+            service = "lookyloo"
             p = subprocess.run(["systemctl", "is-active", "--quiet", service])
             try:
                 p.check_returncode()
-                print('Restarting with systemd...')
-                run_command(f'sudo service {service} restart')
+                print('Restarting Lookyloo with systemd...')
+                run_command('sudo service lookyloo restart')
                 print('done.')
             except subprocess.CalledProcessError:
-                print('Restarting with poetry...')
+                print('Restarting Lookyloo with poetry...')
                 run_command('poetry run stop', expect_fail=True)
                 run_command('poetry run start', capture_output=False)
-                print('Started.')
+                print('Lookyloo started.')
 
 
 if __name__ == '__main__':

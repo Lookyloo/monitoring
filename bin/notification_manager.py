@@ -11,16 +11,16 @@ logging.config.dictConfig(get_config('logging'))
 
 class NotificationManager(AbstractManager):
 
-    def __init__(self, loglevel: int=logging.INFO):
+    def __init__(self, loglevel: int=logging.INFO) -> None:
         super().__init__(loglevel)
         self.script_name = 'notification_manager'
         self.monitoring = Monitoring()
 
-    def _to_run_forever(self):
+    def _to_run_forever(self) -> None:
         self.monitoring.process_notifications()
 
 
-def main():
+def main() -> None:
     nm = NotificationManager()
     nm.run(sleep_in_sec=10)
 

@@ -9,7 +9,7 @@ from .default import get_homedir
 
 
 @cache
-def get_useragent_for_requests():
+def get_useragent_for_requests() -> str:
     return f'WebMonitoring / {version("webmonitoring")}'
 
 

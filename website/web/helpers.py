@@ -8,15 +8,15 @@ import os
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Union, List
 
+from flask import Request
 import flask_login  # type: ignore
 from werkzeug.security import generate_password_hash
 
 from webmonitoring.default import get_homedir, get_config
 
 
-def src_request_ip(request) -> str:
+def src_request_ip(request: Request) -> str | None:
     # NOTE: X-Real-IP is the IP passed by the reverse proxy in the headers.
     real_ip = request.headers.get('X-Real-IP')
     if not real_ip:
@@ -41,11 +41,11 @@ def sri_load() -> dict[str, dict[str, str]]:
         return json.load(f)
 
 
-class User(flask_login.UserMixin):
+class User(flask_login.UserMixin):  # type: ignore[misc]
     pass
 
 
-def load_user_from_request(request):
+def load_user_from_request(request: Request) -> User | None:
     api_key = request.headers.get('Authorization')
     if not api_key:
         return None

@@ -11,17 +11,17 @@ logging.config.dictConfig(get_config('logging'))
 
 class QueueManager(AbstractManager):
 
-    def __init__(self, loglevel: int=logging.INFO):
+    def __init__(self, loglevel: int=logging.INFO) -> None:
         super().__init__(loglevel)
         self.script_name = 'monitoring_queue_manager'
         self.monitoring = Monitoring()
 
-    def _to_run_forever(self):
+    def _to_run_forever(self) -> None:
         self.monitoring.update_monitoring_queue()
         self.monitoring.process_monitoring_queue()
 
 
-def main():
+def main() -> None:
     qm = QueueManager()
     qm.run(sleep_in_sec=10)
 
