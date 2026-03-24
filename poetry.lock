@@ -1885,14 +1885,14 @@ files = [
 
 [[package]]
 name = "lookyloo-models"
-version = "0.1.4"
+version = "0.1.5"
 description = "All the Pydantic models used across Lookyloo"
 optional = false
 python-versions = "<4,>=3.10"
 groups = ["main"]
 files = [
-    {file = "lookyloo_models-0.1.4-py3-none-any.whl", hash = "sha256:59fad65f1fad9b79f677703da18ef691c0d05c4a5d79708ea043be369fb7b125"},
-    {file = "lookyloo_models-0.1.4.tar.gz", hash = "sha256:d6ff248d5ba4489ec6cfbff20ada38d363c737a1a024a3f9277f7f0a14bbdc22"},
+    {file = "lookyloo_models-0.1.5-py3-none-any.whl", hash = "sha256:e60e086ee93a881981a7f3c63e3773aa28c1fed99ce7b01540cbccea5f4619c3"},
+    {file = "lookyloo_models-0.1.5.tar.gz", hash = "sha256:4a8f9889f04cfdd18563426048eb3b7e8ba03a36e13dbc45ed181a68d73175e8"},
 ]
 
 [package.dependencies]
@@ -4266,4 +4266,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10,<3.15"
-content-hash = "07cb3bf82dcffe5378d447f45fc824c5a8aea57e3baf1b21f5de83a325da1bfa"
+content-hash = "2930cb5ce2d9020cd277727d92825f3997d919d3ddbce6c384608a41264a7dd7"

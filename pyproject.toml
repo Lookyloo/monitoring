@@ -33,7 +33,7 @@ defang = "^0.5.3"
 psutil = "^7.2.2"
 dateparser = "^1.3.0"
 pydantic = "^2.12.5"
-lookyloo-models = "^0.1.4"
+lookyloo-models = "^0.1.5"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.19.1"
