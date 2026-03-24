@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from importlib.metadata import version
+from datetime import datetime
 from typing import Any
 
 from flask import Flask, Request, request, render_template, flash, redirect, url_for, Response, make_response
@@ -16,7 +17,6 @@ from werkzeug.security import check_password_hash
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 from wtforms import Form, SelectField, StringField, DateTimeLocalField, FieldList, FormField, EmailField, BooleanField, validators  # type: ignore
 
-from lookyloo_models import CompareSettings, NotificationSettings
 from webmonitoring.default import get_config
 from webmonitoring.exceptions import CannotCompare, AlreadyExpired, AlreadyMonitored, UnknownUUID, InvalidSettings, TimeError
 from webmonitoring.webmonitoring import Monitoring
@@ -168,8 +168,6 @@ def changes_tracking(monitor_uuid: str) -> str:
         if not flask_login.current_user.is_authenticated:
             flash("You must be authenticated to change the settings.", 'error')
         else:
-            compare_settings = CompareSettings(**form.compare_settings.data)
-            notification = NotificationSettings(**form.notification.data)
             try:
                 monitoring.monitor(
                     monitor_uuid=monitor_uuid,
@@ -177,8 +175,8 @@ def changes_tracking(monitor_uuid: str) -> str:
                     expire_at=form.expire_at.data if form.expire_at.data else None,
                     never_expire=True if form.never_expire.data else False,
                     collection=form.collection.data if form.collection.data else None,
-                    compare_settings=compare_settings if compare_settings else None,
-                    notification=notification if notification else None
+                    compare_settings=form.compare_settings.data if form.compare_settings.data else None,
+                    notification=form.notification.data if form.notification.data else None
                 )
             except Exception as e:
                 flash(str(e), 'error')
@@ -188,7 +186,10 @@ def changes_tracking(monitor_uuid: str) -> str:
             flash(f'{key}: {message}', 'error')
 
     monitor_settings = monitoring.get_monitor_settings(monitor_uuid)
-    form = MonitoringForm(data=monitor_settings)
+    data_to_render = monitor_settings.model_dump(exclude_none=True)
+    if 'expire_at' in data_to_render:
+        data_to_render['expire_at'] = datetime.fromtimestamp(data_to_render['expire_at'])
+    form = MonitoringForm(data=data_to_render)
     details = monitoring.get_monitored_details(monitor_uuid)
     if details['number_captures'] < 2:
         changes = {}
@@ -296,14 +297,17 @@ monitor_fields_post = api.model('MonitorFieldsPost', {
 class Monitor(Resource):  # type: ignore[misc]
 
     @api.doc(body=monitor_fields_post)  # type: ignore[untyped-decorator]
-    def post(self) -> str:
+    def post(self) -> Response:
         monit: dict[str, Any] = request.get_json(force=True)
-        monitor_uuid = monitoring.monitor(capture_settings=monit['capture_settings'], frequency=monit['frequency'],
-                                          expire_at=monit.get('expire_at'), collection=monit.get('collection'),
-                                          compare_settings=monit.get('compare_settings'),
-                                          never_expire=monit.get('never_expire', False),
-                                          notification=monit.get('notification'))
-        return monitor_uuid
+        try:
+            monitor_uuid = monitoring.monitor(capture_settings=monit['capture_settings'], frequency=monit['frequency'],
+                                              expire_at=monit.get('expire_at'), collection=monit.get('collection'),
+                                              compare_settings=monit.get('compare_settings'),
+                                              never_expire=monit.get('never_expire', False),
+                                              notification=monit.get('notification'))
+            return make_response(monitor_uuid)
+        except TimeError:
+            return make_response({'message': 'expire at is in the past, cannot monitor.'}, 403)
 
 
 @api.route('/settings_monitor/<string:monitor_uuid>')
@@ -313,7 +317,7 @@ class SettingsMonitor(Resource):  # type: ignore[misc]
 
     def get(self, monitor_uuid: str) -> str:
         settings = monitoring.get_monitor_settings(monitor_uuid)
-        return settings.model_dump_json()
+        return settings.model_dump_json(exclude_none=True)
 
 
 @api.route('/update_monitor/<string:monitor_uuid>')
@@ -337,7 +341,7 @@ class UpdateMonitor(Resource):  # type: ignore[misc]
                                               notification=monit.get('notification'))
             return make_response(monitor_uuid)
         except (UnknownUUID, InvalidSettings, TimeError) as e:
-            return make_response({'message': str(e)})
+            return make_response({'message': str(e)}, 500)
 
 
 @api.route('/stop_monitor/<string:monitor_uuid>')

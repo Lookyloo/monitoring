@@ -14,7 +14,6 @@ from typing import Any, TypedDict, overload
 from collections.abc import MutableMapping
 
 from cron_converter import Cron
-import dateparser
 from defang import defang  # type: ignore
 from lookyloo_models import LookylooCaptureSettings, CompareSettings, NotificationSettings, MonitorCaptureSettings
 from pylookyloo import Lookyloo
@@ -108,7 +107,7 @@ class Monitoring():
 
     def get_monitored_details(self, monitor_uuid: str) -> dict[str, Any]:
         to_return: dict[str, Any] = {'uuid': monitor_uuid}
-        to_return['capture_settings'] = self.get_capture_settings(monitor_uuid)
+        to_return['capture_settings'] = self.get_capture_settings(monitor_uuid).model_dump(exclude_none=True)
         try:
             to_return['next_capture'] = self.get_next_capture(monitor_uuid)
         except TimeError:
@@ -123,13 +122,13 @@ class Monitoring():
 
     def get_capture_settings(self, monitor_uuid: str) -> LookylooCaptureSettings:
         _cs = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
-        return LookylooCaptureSettings(**_cs)
+        return LookylooCaptureSettings.model_validate(_cs)
 
     def get_monitor_settings(self, monitor_uuid: str) -> MonitorCaptureSettings:
         to_return = MonitorCaptureSettings(frequency=self.redis.get(f'{monitor_uuid}:frequency'),
                                            capture_settings=self.get_capture_settings(monitor_uuid))
         if expire_at := self.redis.get(f'{monitor_uuid}:expire'):
-            to_return.expire_at = expire_at
+            to_return.expire_at = float(expire_at)
         if collection := self.redis.get(f'{monitor_uuid}:collection'):
             to_return.collection = collection
         if self.redis.exists(f'{monitor_uuid}:never_expire'):
@@ -137,12 +136,12 @@ class Monitoring():
         if compare_settings := self.get_compare_settings(monitor_uuid):
             to_return.compare_settings = compare_settings
         if notification := self.redis.hgetall(f'{monitor_uuid}:notification'):
-            to_return.notification = NotificationSettings(**notification)
+            to_return.notification = NotificationSettings.model_validate(notification)
         return to_return
 
     def get_compare_settings(self, monitor_uuid: str) -> CompareSettings:
-        return {k: json.loads(v)
-                for k, v in self.redis.hgetall(f'{monitor_uuid}:compare_settings').items()}  # type: ignore
+        return CompareSettings.model_validate(
+            {k: json.loads(v) for k, v in self.redis.hgetall(f'{monitor_uuid}:compare_settings').items()})
 
     def _next_run_from_cron(self, cron_string: str, /) -> datetime:
         try:
@@ -154,122 +153,134 @@ class Monitoring():
             raise TimeError(f'Invalid cron format: {cron_string} - {e}')
 
     @overload
-    def monitor(self, *, monitor_settings: MonitorCaptureSettings) -> str:
-        """Start a new monitoring with a MonitorSettings object"""
+    def monitor(self, *, monitor_settings: MonitorCaptureSettings | dict[str, Any]) -> str:
+        """Start a new monitoring with a MonitorCaptureSettings object"""
         ...
 
     @overload
-    def monitor(self, *, capture_settings: LookylooCaptureSettings, frequency: str,
+    def monitor(self, *, capture_settings: LookylooCaptureSettings | dict[str, Any], frequency: str,
                 expire_at: datetime | str | int | float | None=None,
-                collection: str | None=None, compare_settings: CompareSettings | None=None,
+                collection: str | None=None,
+                compare_settings: CompareSettings | dict[str, Any] | None=None,
                 never_expire: bool=False,
-                notification: NotificationSettings | None=None) -> str:
+                notification: NotificationSettings | dict[str, Any] | None=None) -> str:
         """Start a new monitoring with individual parameters"""
         ...
 
     @overload
-    def monitor(self, *, monitor_uuid: str, capture_settings: LookylooCaptureSettings | None=None,
+    def monitor(self, *, monitor_uuid: str, capture_settings: LookylooCaptureSettings | dict[str, Any] | None=None,
                 frequency: str | None=None,
                 expire_at: datetime | str | int | float | None=None,
                 collection: str | None=None,
                 never_expire: bool=False,
-                compare_settings: CompareSettings | None=None,
-                notification: NotificationSettings | None=None) -> str:
+                compare_settings: CompareSettings | dict[str, Any] | None=None,
+                notification: NotificationSettings | dict[str, Any] | None=None) -> str:
         """Update an existing monitoring with individual parameters"""
         ...
 
-    def monitor(self, *, capture_settings: LookylooCaptureSettings | None=None,
+    def monitor(self, *, capture_settings: LookylooCaptureSettings | dict[str, Any] | None=None,
                 frequency: str | None=None,
                 expire_at: datetime | str | int | float | None=None,
                 collection: str | None=None,
                 never_expire: bool=False,
-                compare_settings: CompareSettings | None=None,
-                notification: NotificationSettings | None=None,
-                monitor_settings: MonitorCaptureSettings | None=None,
+                compare_settings: CompareSettings | dict[str, Any] | None=None,
+                notification: NotificationSettings | dict[str, Any] | None=None,
+                monitor_settings: MonitorCaptureSettings | dict[str, Any] | None=None,
                 monitor_uuid: str | None=None) -> str:
-        is_update = False
-        if monitor_uuid:
-            if (self.redis.sismember('monitored', monitor_uuid)
-                    or self.redis.sismember('expired', monitor_uuid)):
-                is_update = True
-            else:
-                raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
-        else:
-            monitor_uuid = str(uuid4())
-        logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
-        if monitor_settings:
-            capture_settings = monitor_settings.capture_settings
-            frequency = monitor_settings.frequency
-            expire_at = monitor_settings.expire_at
-            collection = monitor_settings.collection
-            never_expire = monitor_settings.never_expire
-            compare_settings = monitor_settings.compare_settings
-            notification = monitor_settings.notification
 
-        if not capture_settings and not is_update:
-            logger.critical('No capture settings')
-            raise InvalidSettings('The capture settings are missing.')
-        if not frequency and not is_update:
-            logger.critical('No frequency')
-            raise InvalidSettings('The frequency missing.')
+        # is called with a monitor_settings, ignore everything else
+        is_update = False
+        _ms = MonitorCaptureSettings.model_validate(monitor_settings) if isinstance(monitor_settings, dict) else monitor_settings
+        if _ms:
+            if _ms.monitor_uuid:
+                # this should be an update, make sure the UUID exists
+                if (self.redis.sismember('monitored', _ms.monitor_uuid)
+                        or self.redis.sismember('expired', _ms.monitor_uuid)):
+                    is_update = True
+                else:
+                    raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
+            else:
+                _ms.monitor_uuid = str(uuid4())
+        else:
+            if monitor_uuid:
+                if (self.redis.sismember('monitored', monitor_uuid)
+                        or self.redis.sismember('expired', monitor_uuid)):
+                    is_update = True
+                else:
+                    raise UnknownUUID(f'Monitoring UUID unknown: {monitor_uuid}')
+            else:
+                monitor_uuid = str(uuid4())
+
+            _cs = LookylooCaptureSettings.model_validate(capture_settings) if isinstance(capture_settings, dict) else capture_settings
+            _comp_s = CompareSettings.model_validate(compare_settings) if isinstance(compare_settings, dict) else compare_settings
+            _n = NotificationSettings.model_validate(notification) if isinstance(notification, dict) else notification
+            _ms = MonitorCaptureSettings(
+                capture_settings=_cs,
+                frequency=frequency,
+                never_expire=never_expire,
+                expire_at=expire_at,
+                collection=collection,
+                compare_settings=_comp_s,
+                notification=_n,
+                monitor_uuid=monitor_uuid
+            )
+        if not _ms.monitor_uuid:
+            raise InvalidSettings('The monitor UUID is missing.')
+
+        logger = MonitoringLogAdapter(self.master_logger, {'uuid': _ms.monitor_uuid})
+        if is_update:
+            # capture settings and frequency can be none
+            pass
+        else:
+            if not _ms.capture_settings:
+                logger.critical('No capture settings')
+                raise InvalidSettings('The capture settings are missing.')
+            if not _ms.frequency:
+                logger.critical('No frequency')
+                raise InvalidSettings('The frequency missing.')
 
         p = self.redis.pipeline()
-        if capture_settings:
-            p.hset(f'{monitor_uuid}:capture_settings', mapping=capture_settings.redis_dump())
-        if frequency:
-            p.set(f'{monitor_uuid}:frequency', frequency.lower())
+        if _ms.capture_settings:
+            p.hset(f'{_ms.monitor_uuid}:capture_settings', mapping=_ms.capture_settings.redis_dump())
+        if _ms.frequency:
+            p.set(f'{_ms.monitor_uuid}:frequency', _ms.frequency.lower())
 
-        if never_expire:
-            p.set(f'{monitor_uuid}:never_expire', 1)
+        if _ms.never_expire:
+            p.set(f'{_ms.monitor_uuid}:never_expire', 1)
 
-        if collection:
-            p.set(f'{monitor_uuid}:collection', collection)
-            p.sadd('collections', collection)
-            p.sadd(f'collections:{collection}', monitor_uuid)
-            logger.info(f'Capture added to monitoring in collection "{collection}"')
+        if _ms.collection:
+            p.set(f'{_ms.monitor_uuid}:collection', _ms.collection)
+            p.sadd('collections', _ms.collection)
+            if _ms.monitor_uuid:
+                p.sadd(f'collections:{_ms.collection}', _ms.monitor_uuid)
+            logger.info(f'Capture added to monitoring in collection "{_ms.collection}"')
         elif is_update:
-            p.delete(f'{monitor_uuid}:collection')
+            p.delete(f'{_ms.monitor_uuid}:collection')
         else:
             logger.info('Capture added to monitoring')
 
-        if expire_at:
-            if isinstance(expire_at, str):
-                if dt_expire := dateparser.parse(expire_at):
-                    _expire = dt_expire.timestamp()
-            if isinstance(expire_at, (int, float)):
-                _expire = float(expire_at)
-            if isinstance(expire_at, datetime):
-                _expire = expire_at.timestamp()
+        if _ms.expire_at:
+            if _ms.expire_at < datetime.now().timestamp():
+                # The expiration time is in the past.
+                raise TimeError('Expiration time in the past.')
 
-            if _expire:
-                if _expire < datetime.now().timestamp():
-                    # The expiration time is in the past.
-                    raise TimeError('Expiration time in the past.')
-                p.set(f'{monitor_uuid}:expire', _expire)
+            p.set(f'{_ms.monitor_uuid}:expire', _ms.expire_at)
 
-        if compare_settings:
-            _compare_settings = compare_settings.redis_dump()
-            if _compare_settings:
-                p.hset(f'{monitor_uuid}:compare_settings', mapping=_compare_settings)
-            if is_update and _compare_settings is not None:
-                # the keys with empty values have been removed
-                # On update, we want to remove them from the hash too
-                if to_delete := compare_settings.redis_dump().keys() - _compare_settings.keys():
-                    p.hdel(f'{monitor_uuid}:compare_settings', *to_delete)
+        if _ms.compare_settings:
+            if is_update:
+                p.delete(f'{_ms.monitor_uuid}:compare_settings')
+            if _compare_settings := _ms.compare_settings.redis_dump():
+                p.hset(f'{_ms.monitor_uuid}:compare_settings', mapping=_compare_settings)
 
-        if notification:
-            _notification = notification.redis_dump()
-            if _notification:
-                p.hset(f'{monitor_uuid}:notification', mapping=_notification)
-            if is_update and _notification is not None:
-                # the keys with empty values have been removed
-                # On update, we want to remove them from the hash too
-                if to_delete := notification.redis_dump().keys() - _notification.keys():
-                    p.hdel(f'{monitor_uuid}:notification', *to_delete)
+        if _ms.notification:
+            if is_update:
+                p.delete(f'{_ms.monitor_uuid}:notification')
+            if _notification := _ms.notification.redis_dump():
+                p.hset(f'{_ms.monitor_uuid}:notification', mapping=_notification)
 
-        p.sadd('monitored', monitor_uuid)
+        p.sadd('monitored', _ms.monitor_uuid)
         p.execute()
-        return monitor_uuid
+        return _ms.monitor_uuid
 
     def stop_monitor(self, monitor_uuid: str) -> bool:
         if not (self.redis.sismember('monitored', monitor_uuid)
@@ -396,7 +407,7 @@ class Monitoring():
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
             if _cs := self.redis.hgetall(f'{monitor_uuid}:capture_settings'):
-                settings = LookylooCaptureSettings(**_cs)
+                settings = LookylooCaptureSettings.model_validate(_cs)
                 settings.listing = False  # force the monitored capture our of the lookyloo index page
                 logger.info('Trigering capture')
                 try:
@@ -508,7 +519,7 @@ class Monitoring():
         logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
         emails_to_notify: list[str] = []
         if _ns := self.redis.hgetall(f'{monitor_uuid}:notification'):
-            notification_settings = NotificationSettings(**_ns)
+            notification_settings = NotificationSettings.model_validate(_ns)
             if notification_settings.email:
                 emails_to_notify.append(notification_settings.email)
             else:
