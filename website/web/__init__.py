@@ -351,9 +351,9 @@ class UpdateMonitor(Resource):  # type: ignore[misc]
 class StopMonitor(Resource):  # type: ignore[misc]
     method_decorators = [api_auth_check]
 
-    def post(self, monitor_uuid: str) -> Response:
+    def post(self, monitor_uuid: str) -> Response | bool:
         try:
-            return make_response(monitoring.stop_monitor(monitor_uuid))
+            return monitoring.stop_monitor(monitor_uuid)
         except (UnknownUUID, AlreadyExpired) as e:
             return make_response({'message': str(e)})
 
@@ -365,9 +365,9 @@ class StopMonitor(Resource):  # type: ignore[misc]
 class StartMonitor(Resource):  # type: ignore[misc]
     method_decorators = [api_auth_check]
 
-    def post(self, monitor_uuid: str) -> Response:
+    def post(self, monitor_uuid: str) -> Response | bool:
         try:
-            return make_response(monitoring.start_monitor(monitor_uuid))
+            return monitoring.start_monitor(monitor_uuid)
         except (UnknownUUID, AlreadyMonitored) as e:
             return make_response({'message': str(e)})
 
@@ -408,7 +408,6 @@ monitor_field_response = api.model('MonitorFieldResponse', {
                 'collection': 'Limit the response to a specific collection'})
 class JsonMonitored(Resource):  # type: ignore[misc]
 
-    @api.marshal_with(monitor_field_response, skip_none=True)  # type: ignore[untyped-decorator]
     def get(self, collection: str | None=None) -> Response:
         return make_response(monitoring.get_monitored_entries(collection))
 
@@ -420,7 +419,6 @@ class JsonMonitored(Resource):  # type: ignore[misc]
                 'collection': 'Limit the response to a specific collection'})
 class JsonExpired(Resource):  # type: ignore[misc]
 
-    @api.marshal_with(monitor_field_response, skip_none=True)  # type: ignore[untyped-decorator]
     def get(self, collection: str | None=None) -> Response:
         return make_response(monitoring.get_expired_entries(collection))
 
