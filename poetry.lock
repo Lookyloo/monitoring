@@ -45,14 +45,14 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "anyio"
-version = "4.12.1"
+version = "4.13.0"
 description = "High-level concurrency and networking framework on top of asyncio or Trio"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["old"]
 files = [
-    {file = "anyio-4.12.1-py3-none-any.whl", hash = "sha256:d405828884fc140aa80a3c667b8beed277f1dfedec42ba031bd6ac3db606ab6c"},
-    {file = "anyio-4.12.1.tar.gz", hash = "sha256:41cfcc3a4c85d3f05c932da7c26d0201ac36f72abd4435ba90d0464a3ffed703"},
+    {file = "anyio-4.13.0-py3-none-any.whl", hash = "sha256:08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708"},
+    {file = "anyio-4.13.0.tar.gz", hash = "sha256:334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc"},
 ]
 
 [package.dependencies]
@@ -61,7 +61,7 @@ idna = ">=2.8"
 typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
-trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python_version >= \"3.10\""]
+trio = ["trio (>=0.32.0)"]
 
 [[package]]
 name = "appnope"
@@ -1885,14 +1885,14 @@ files = [
 
 [[package]]
 name = "lookyloo-models"
-version = "0.1.3"
+version = "0.1.4"
 description = "All the Pydantic models used across Lookyloo"
 optional = false
 python-versions = "<4,>=3.10"
 groups = ["main"]
 files = [
-    {file = "lookyloo_models-0.1.3-py3-none-any.whl", hash = "sha256:ce35aa92ec00f04cb5119ce95df910d234a0a7e34818a4e357cfe43fc4586139"},
-    {file = "lookyloo_models-0.1.3.tar.gz", hash = "sha256:1c91c4dcfdcbb0382fcce7998434f7d7426768f931cf79f1cbe9d583d8dc4c6e"},
+    {file = "lookyloo_models-0.1.4-py3-none-any.whl", hash = "sha256:59fad65f1fad9b79f677703da18ef691c0d05c4a5d79708ea043be369fb7b125"},
+    {file = "lookyloo_models-0.1.4.tar.gz", hash = "sha256:d6ff248d5ba4489ec6cfbff20ada38d363c737a1a024a3f9277f7f0a14bbdc22"},
 ]
 
 [package.dependencies]
@@ -3003,14 +3003,14 @@ tests = ["coverage[toml] (==7.10.7)", "pytest (>=8.4.2,<9.0.0)"]
 
 [[package]]
 name = "pylookyloo"
-version = "1.37.3"
+version = "1.37.4"
 description = "Python CLI and module for Lookyloo"
 optional = false
 python-versions = "<3.15,>=3.10"
 groups = ["main"]
 files = [
-    {file = "pylookyloo-1.37.3-py3-none-any.whl", hash = "sha256:098101ec87efefb913d8383fca71849fe822c351c3c6826ceb18fe8c2bb14c27"},
-    {file = "pylookyloo-1.37.3.tar.gz", hash = "sha256:4300b6cc3702cbc4d20f6690ce4585c62002a7cc715f1943f50672aca80a0c47"},
+    {file = "pylookyloo-1.37.4-py3-none-any.whl", hash = "sha256:137590d0644dea14d6b308ddb618115cdd566e19de1cc2b0a799a1327cf0fcd5"},
+    {file = "pylookyloo-1.37.4.tar.gz", hash = "sha256:ef0a45642981f2ebff21222a387968011ea7399763d848cd76255f45b07a79f3"},
 ]
 
 [package.dependencies]
@@ -3020,7 +3020,7 @@ requests = ">=2.32.5"
 
 [package.extras]
 docs = ["Sphinx (>=9.1.0) ; python_version >= \"3.12\""]
-examples = ["pylacus (>=1.22.1)"]
+examples = ["pylacus (>=1.22.3)"]
 
 [[package]]
 name = "python-dateutil"
@@ -3934,14 +3934,14 @@ types-pyOpenSSL = "*"
 
 [[package]]
 name = "types-requests"
-version = "2.32.4.20260107"
+version = "2.32.4.20260324"
 description = "Typing stubs for requests"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "types_requests-2.32.4.20260107-py3-none-any.whl", hash = "sha256:b703fe72f8ce5b31ef031264fe9395cac8f46a04661a79f7ed31a80fb308730d"},
-    {file = "types_requests-2.32.4.20260107.tar.gz", hash = "sha256:018a11ac158f801bfa84857ddec1650750e393df8a004a8a9ae2a9bec6fcb24f"},
+    {file = "types_requests-2.32.4.20260324-py3-none-any.whl", hash = "sha256:f83ef2deb284fe99a249b8b0b0a3e4b9809e01ff456063c4df0aac7670c07ab9"},
+    {file = "types_requests-2.32.4.20260324.tar.gz", hash = "sha256:33a2a9ccb1de7d4e4da36e347622c35418f6761269014cc32857acabd5df739e"},
 ]
 
 [package.dependencies]
@@ -4105,14 +4105,14 @@ test = ["pytest", "websockets"]
 
 [[package]]
 name = "werkzeug"
-version = "3.1.6"
+version = "3.1.7"
 description = "The comprehensive WSGI web application library."
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "old"]
 files = [
-    {file = "werkzeug-3.1.6-py3-none-any.whl", hash = "sha256:7ddf3357bb9564e407607f988f683d72038551200c704012bb9a4c523d42f131"},
-    {file = "werkzeug-3.1.6.tar.gz", hash = "sha256:210c6bede5a420a913956b4791a7f4d6843a43b6fcee4dfa08a65e93007d0d25"},
+    {file = "werkzeug-3.1.7-py3-none-any.whl", hash = "sha256:4b314d81163a3e1a169b6a0be2a000a0e204e8873c5de6586f453c55688d422f"},
+    {file = "werkzeug-3.1.7.tar.gz", hash = "sha256:fb8c01fe6ab13b9b7cdb46892b99b1d66754e1d7ab8e542e865ec13f526b5351"},
 ]
 
 [package.dependencies]
@@ -4266,4 +4266,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10,<3.15"
-content-hash = "d44234092dad65ecaf2487767f96efee3aa9cf88d07b106d9b2dfef95461247f"
+content-hash = "07cb3bf82dcffe5378d447f45fc824c5a8aea57e3baf1b21f5de83a325da1bfa"
