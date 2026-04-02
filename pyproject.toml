@@ -40,7 +40,7 @@ wtforms = "^3.2.1"
 mypy = "^1.19.1"
 types-redis = {version = "^4.6.0.20241004"}
 types-requests = "^2.33.0.20260327"
-types-psutil = "^7.2.2.20260130"
+types-psutil = "^7.2.2.20260402"
 types-dateparser = "^1.4.0.20260328"
 
 [build-system]
