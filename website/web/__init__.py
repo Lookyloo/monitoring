@@ -385,11 +385,16 @@ class JsonCompare(Resource):  # type: ignore[misc]
 
 
 @api.route('/json/collections')
-@api.doc(description='Get the list of existing collections')
+@api.doc(description='Get the list of existing collections',
+         security='apikey')
 class JsonCollections(Resource):  # type: ignore[misc]
 
     def get(self) -> Response:
-        return make_response(list(monitoring.get_collections()))
+        collections = monitoring.get_collections()
+        if not (flask_login.current_user.is_authenticated or load_user_from_request(request)):
+            # strip collections that are too long (unless you're logged in)
+            collections = {c for c in collections if len(c) < 30}
+        return make_response(list(collections))
 
 
 monitor_field_response = api.model('MonitorFieldResponse', {
