@@ -101,8 +101,13 @@ class Monitoring():
         for m in self.redis.sscan_iter(key):
             if collection and not self.redis.sismember(f'collections:{collection}', m):
                 continue
-            details = self.get_monitored_details(m)
-            to_return.append(details)
+            logger = MonitoringLogAdapter(self.master_logger, {'uuid': m})
+            try:
+                details = self.get_monitored_details(m)
+                to_return.append(details)
+            except Exception as e:
+                logger.warning(f'Unable to get details, broken capture: {e}')
+                self.redis.srem(f'collections:{collection}', m)
         return to_return
 
     def get_monitored_details(self, monitor_uuid: str) -> dict[str, Any]:
@@ -121,8 +126,10 @@ class Monitoring():
         return to_return
 
     def get_capture_settings(self, monitor_uuid: str) -> LookylooCaptureSettings:
-        _cs = self.redis.hgetall(f'{monitor_uuid}:capture_settings')
-        return LookylooCaptureSettings.model_validate(_cs)
+        if _cs := self.redis.hgetall(f'{monitor_uuid}:capture_settings'):
+            return LookylooCaptureSettings.model_validate(_cs)
+        else:
+            raise InvalidSettings(f'Missing capture settings for {monitor_uuid}')
 
     def get_monitor_settings(self, monitor_uuid: str) -> MonitorCaptureSettings:
         to_return = MonitorCaptureSettings(frequency=self.redis.get(f'{monitor_uuid}:frequency'),
@@ -136,7 +143,11 @@ class Monitoring():
         if compare_settings := self.get_compare_settings(monitor_uuid):
             to_return.compare_settings = compare_settings
         if notification := self.redis.hgetall(f'{monitor_uuid}:notification'):
-            to_return.notification = NotificationSettings.model_validate(notification)
+            if notification and not notification.get('email'):
+                # broken entry
+                self.redis.delete(f'{monitor_uuid}:notification')
+            else:
+                to_return.notification = NotificationSettings.model_validate(notification)
         return to_return
 
     def get_compare_settings(self, monitor_uuid: str) -> CompareSettings:

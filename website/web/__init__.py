@@ -185,7 +185,10 @@ def changes_tracking(monitor_uuid: str) -> str:
         for key, message in form.errors.items():
             flash(f'{key}: {message}', 'error')
 
-    monitor_settings = monitoring.get_monitor_settings(monitor_uuid)
+    try:
+        monitor_settings = monitoring.get_monitor_settings(monitor_uuid)
+    except Exception:
+        return f'Invalid uuid: {monitor_uuid}'
     data_to_render = monitor_settings.model_dump(exclude_none=True)
     if 'expire_at' in data_to_render:
         data_to_render['expire_at'] = datetime.fromtimestamp(data_to_render['expire_at'])
