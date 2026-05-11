@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
+import pickle
 
 from uuid import uuid4
 
@@ -249,6 +251,19 @@ class Monitoring():
             if not _ms.frequency:
                 logger.critical('No frequency')
                 raise InvalidSettings('The frequency missing.')
+
+            # check if there is already an ongoing monitoring instance with the same settings
+            hash_query = hashlib.sha512(pickle.dumps(_ms.capture_settings)).hexdigest()
+            if (existing_uuid := self.redis.get(f'monitored:query_hash:{hash_query}')):
+                if isinstance(existing_uuid, bytes):
+                    u = existing_uuid.decode()
+                u = existing_uuid
+                if self.redis.sismember('monitored', u):
+                    return u
+                else:
+                    self.redis.delete(f'monitored:query_hash:{hash_query}')
+            # monitor_uuid is always a string there.
+            self.redis.set(f'monitored:query_hash:{hash_query}', monitor_uuid)  # type: ignore[arg-type]
 
         p = self.redis.pipeline()
         if _ms.capture_settings:
