@@ -252,13 +252,16 @@ class Monitoring():
                 logger.critical('No frequency')
                 raise InvalidSettings('The frequency missing.')
 
-            # check if there is already an ongoing monitoring instance with the same settings
-            hash_query = hashlib.sha512(pickle.dumps(_ms.capture_settings)).hexdigest()
+            # check if there is already an ongoing monitoring instance with the same settings (ignore the UUID)
+            to_hash = _ms.capture_settings.model_dump()
+            to_hash.pop('uuid', None)
+            hash_query = hashlib.sha512(pickle.dumps(to_hash)).hexdigest()
             if (existing_uuid := self.redis.get(f'monitored:query_hash:{hash_query}')):
                 if isinstance(existing_uuid, bytes):
                     u = existing_uuid.decode()
                 u = existing_uuid
                 if self.redis.sismember('monitored', u):
+                    logger.info(f'Got a duplicate for {_ms.capture_settings.url}')
                     return u
                 else:
                     self.redis.delete(f'monitored:query_hash:{hash_query}')
