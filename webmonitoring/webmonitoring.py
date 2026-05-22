@@ -259,14 +259,17 @@ class Monitoring():
             if (existing_uuid := self.redis.get(f'monitored:query_hash:{hash_query}')):
                 if isinstance(existing_uuid, bytes):
                     u = existing_uuid.decode()
-                u = existing_uuid
+                else:
+                    u = existing_uuid
                 if self.redis.sismember('monitored', u):
                     logger.info(f'Got a duplicate for {_ms.capture_settings.url}')
+                    # Update the expire time
+                    self.redis.expire(f'monitored:query_hash:{hash_query}', 360000)
                     return u
                 else:
                     self.redis.delete(f'monitored:query_hash:{hash_query}')
             # monitor_uuid is always a string there.
-            self.redis.set(f'monitored:query_hash:{hash_query}', monitor_uuid)  # type: ignore[arg-type]
+            self.redis.set(f'monitored:query_hash:{hash_query}', monitor_uuid, ex=360000)  # type: ignore[arg-type]
 
         p = self.redis.pipeline()
         if _ms.capture_settings:
