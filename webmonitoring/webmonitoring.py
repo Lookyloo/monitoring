@@ -439,6 +439,7 @@ class Monitoring():
         for monitor_uuid in self.redis_zpoprangebyscore(keys=['monitoring_queue'], args=[now]):
             logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
             if _cs := self.redis.hgetall(f'{monitor_uuid}:capture_settings'):
+                _cs.pop('uuid', None)
                 settings = LookylooCaptureSettings.model_validate(_cs)
                 settings.listing = False  # force the monitored capture our of the lookyloo index page
                 logger.info('Trigering capture')
