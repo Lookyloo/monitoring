@@ -485,14 +485,14 @@ files = [
 
 [[package]]
 name = "cron-converter"
-version = "1.3.1"
+version = "2.0.1"
 description = "Cron string parser and scheduler for Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "cron_converter-1.3.1-py3-none-any.whl", hash = "sha256:60c645532802e12ad09097091a5ec83a79b9b1064374e89edb0facf2ba36a697"},
-    {file = "cron_converter-1.3.1.tar.gz", hash = "sha256:53eb26be3eb2e0f206a6e227ca0c19b3807b44a24b39f4eda3718703e6474f4a"},
+    {file = "cron_converter-2.0.1-py3-none-any.whl", hash = "sha256:80875151d1918f90a41af304bbb74668a1badc2dc79db446d2f18153debbb708"},
+    {file = "cron_converter-2.0.1.tar.gz", hash = "sha256:767813cda685433707a91ab3eb2326d3a0dc53c017409c01a9a6df6770975b98"},
 ]
 
 [package.dependencies]
@@ -2450,4 +2450,4 @@ email = ["email-validator (>=2.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10,<3.15"
-content-hash = "e99965133d7dd70919d0d59178bb7222a1f4c7bc0e1c955ddb1b87633e45d588"
+content-hash = "15f072944f73b79b0e889e20e6d993aaa6d87c55227641fd44b1d462a5597627"
