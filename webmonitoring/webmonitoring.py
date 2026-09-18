@@ -461,6 +461,9 @@ class Monitoring():
         for monitor_uuid, capture_uuid in self.redis.hgetall('to_notify').items():
             logger = MonitoringLogAdapter(self.master_logger, {'uuid': monitor_uuid})
             capture_status = self.lookyloo.get_status(capture_uuid)
+            if 'message' in capture_status:
+                logger.info(f'Failed at getting the status, retry later: {capture_status["message"]}')
+                continue
             if 'status_code' not in capture_status:
                 logger.critical(f'Incorrect response from Lookyloo: {capture_status}, retry later.')
                 continue
