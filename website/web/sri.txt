@@ -1,7 +1,7 @@
 {
   "static": {
-    "datatables.min.css": "jmp8njMsf5TmfQZfDo4xOlop+hYsxW37AVIiBQCpBa1Cdrp2eBMqAt5wCQURrmFFYB8sduKjz2BM5GB0Pa2uZg==",
-    "datatables.min.js": "QXw/uqzj8km0qIMOTlkdakPga1IQ83n+chBU9shO2tq1YDm0+HK8OLMkEVTC/bFXTRH2u66fURYzTsDfrvFibw==",
+    "datatables.min.css": "2+7wtIAbXNMfIF4ZAzSShhL7rjuVo1c60Iti1SPLPZc8rYc2mR6zCFofXGdZ1+/D0bnkinR/HbYuSNiuAyqv9A==",
+    "datatables.min.js": "j3y7NxOeRwvAleYF31lktke2N6UYC2w/VNj/5Y47pgz+T7HhAKhPaU8radCp3Be21+cdBCLtyJf7bl3w6i3s7g==",
     "jquery.min.js": "v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
   }
 }
