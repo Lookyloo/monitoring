@@ -1,0 +1,28 @@
+.git
+.github
+.venv
+.env
+.mypy_cache
+**/__pycache__
+**/*.py[cod]
+*.swp
+
+# Runtime data, mounted as volumes
+cache/cache.sock
+cache/cache.pid
+cache/dump.rdb
+logs/*
+!logs/.keepdir
+website/logs/*
+!website/logs/.keepdir
+secret_key
+
+# Local config files may contain credentials, they are mounted at runtime
+config/*.json
+config/*.json.bkp
+
+# Not needed in the image
+tests
+Dockerfile
+docker-compose.yml
+.dockerignore

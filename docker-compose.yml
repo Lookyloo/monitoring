@@ -1,0 +1,39 @@
+services:
+
+  redis-cache:
+    image: valkey/valkey:8
+    working_dir: /cache
+    command: ./cache.conf --daemonize no
+    restart: unless-stopped
+    healthcheck:
+        test: ["CMD", "valkey-cli", "-s", "/cache/cache.sock", "ping"]
+        interval: 5s
+        timeout: 3s
+        retries: 10
+    volumes:
+        - ./cache:/cache
+
+  monitoring:
+    build: .
+    working_dir: /monitoring
+    restart: unless-stopped
+    stop_grace_period: 30s
+    networks:
+        # Join the Lookyloo network, set "lookyloo_url": "http://lookyloo:5100"
+        # in config/generic.json
+        - default
+        - lookyloo
+    volumes:
+        - ./cache:/monitoring/cache
+        - ./config:/monitoring/config
+        - ./logs:/monitoring/logs
+    ports:
+        - "5200:5200"
+    depends_on:
+        redis-cache:
+            condition: service_healthy
+
+networks:
+    lookyloo:
+        external: true
+        name: ${LOOKYLOO_NETWORK:-lookyloo_default}
