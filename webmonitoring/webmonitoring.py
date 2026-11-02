@@ -445,12 +445,16 @@ class Monitoring():
                 logger.info('Trigering capture')
                 try:
                     new_capture_uuid = self.lookyloo.submit(capture_settings=settings, quiet=True)
-                    if not self.redis.zscore(f'{monitor_uuid}:captures', new_capture_uuid):
-                        self.redis.zadd(f'{monitor_uuid}:captures', mapping={new_capture_uuid: now})
+                    if isinstance(new_capture_uuid, dict):
+                        ncu = new_capture_uuid['uuid']
+                    else:
+                        ncu = new_capture_uuid
+                    if not self.redis.zscore(f'{monitor_uuid}:captures', ncu):
+                        self.redis.zadd(f'{monitor_uuid}:captures', mapping={ncu: now})
                         # Check if the monitoring settings have notification settings
                         if self.redis.exists(f'{monitor_uuid}:notification') or self.force_notification:
                             # Flag it for the notification mechanism
-                            self.redis.hset('to_notify', mapping={monitor_uuid: new_capture_uuid})
+                            self.redis.hset('to_notify', mapping={monitor_uuid: ncu})
                 except ConnectionError as e:
                     logger.warning(f'Unable to connect to lookyloo: {e}')
             else:
