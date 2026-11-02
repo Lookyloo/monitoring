@@ -56,3 +56,10 @@ poetry run stop
 
 With the default configuration, you can access the web interface on `http://0.0.0.0:5200`,
 where you will find the API and can start playing with it.
+
+# Docker
+
+The monitoring container joins the network of Lookyloo docker compose (`lookyloo_default`), so start Lookyloo first.
+Set `LOOKYLOO_NETWORK` if Lookyloo uses a different network name.
+In `config/generic.json`, set `"lookyloo_url": "http://lookyloo:5100"` to reach Lookyloo.
+Start with `docker compose up -d --build`, the web interface is then available on port 5200.
