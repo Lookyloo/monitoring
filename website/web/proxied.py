@@ -17,4 +17,8 @@ class ReverseProxied():
 
         if scheme:
             environ['wsgi.url_scheme'] = scheme
+
+        prefix = environ.get('HTTP_X_FORWARDED_PREFIX')
+        if prefix:
+            environ['SCRIPT_NAME'] = prefix.rstrip('/')
         return self.app(environ, start_response)

@@ -27,6 +27,20 @@ services:
         - ./cache:/monitoring/cache
         - ./config:/monitoring/config
         - ./logs:/monitoring/logs
+    # To serve the website under a sub path behind an nginx reverse proxy, add
+    # this to nginx. The trailing / on proxy_pass strips the prefix, and
+    # X-Forwarded-Prefix makes the generated links include it.
+    #
+    #   location /monitoring/ {
+    #       proxy_pass http://127.0.0.1:5200/;
+    #       proxy_set_header Host $host;
+    #       proxy_set_header X-Forwarded-Proto $scheme;
+    #       proxy_set_header X-Forwarded-Prefix /monitoring;
+    #   }
+    #
+    # If nginx runs on the same host, publish "127.0.0.1:5200:5200" instead so
+    # the website cannot be reached directly. If nginx runs in a container on a
+    # shared network, use http://monitoring:5200/ in proxy_pass.
     ports:
         - "5200:5200"
     depends_on:
