@@ -2510,14 +2510,14 @@ dev = ["pytest", "setuptools"]
 
 [[package]]
 name = "wtforms"
-version = "3.3.1"
+version = "3.3.2"
 description = "Form validation and rendering for Python web development."
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "wtforms-3.3.1-py3-none-any.whl", hash = "sha256:2f4728ef3f67173c22590e60e845937598af7455474330fdb84354a609d67ec1"},
-    {file = "wtforms-3.3.1.tar.gz", hash = "sha256:9d10ccb5740290c9ae6673522d87bcae3b669cf0cb4e4584aee229b4694af10c"},
+    {file = "wtforms-3.3.2-py3-none-any.whl", hash = "sha256:2fac992f39102d6268b06e05cdbdf37a7e9b9a4e103916d2dff1d09a080b531d"},
+    {file = "wtforms-3.3.2.tar.gz", hash = "sha256:49bb51d10b7832d497e758736da4d56f7d129a015db24756f36f28992f175404"},
 ]
 
 [package.dependencies]
